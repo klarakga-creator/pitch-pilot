@@ -116,7 +116,7 @@ input[type=range]{width:150px;accent-color:var(--accent)}
 .keyctl output{min-width:64px;text-align:center;font:600 17px/1 var(--display)}
 
 /* calibration */
-.bignote{font:700 clamp(56px,16vw,96px)/1 var(--display);text-align:center;min-height:1em;transition:color .15s}
+.bignote{font:700 clamp(40px,11vw,64px)/1 var(--display);text-align:center;min-height:1em;transition:color .15s}
 .calbar{height:14px;border-radius:10px;background:rgba(255,255,255,.1);overflow:hidden}
 .calbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#4dabff,#7bed6f);border-radius:10px}
 .steps{display:flex;gap:8px}
@@ -124,6 +124,25 @@ input[type=range]{width:150px;accent-color:var(--accent)}
 .steps i.on{background:var(--accent)}
 .quick{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
 
+#calViz{width:100%;height:190px;display:block}
+/* profiles */
+.plist{display:flex;flex-direction:column;gap:8px}
+.prow{display:flex;align-items:center;gap:6px;border-radius:18px;background:var(--panel2);border:1px solid var(--line)}
+.prow.on{border-color:var(--accent);background:rgba(255,212,59,.1)}
+.ppick{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:10px 12px;text-align:left;border-radius:18px}
+.ppick b{display:block;font:600 18px/1.2 var(--display);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ppick .small{display:block}
+.pdel{flex:0 0 auto;min-width:44px;height:44px;margin-right:6px;border-radius:12px;color:var(--muted);font:600 20px/1 var(--display)}
+.pdel.armed{background:var(--hot);color:#fff;font-size:14px;padding:0 12px}
+.ava{display:grid;place-items:center;border-radius:50%;background:var(--c);color:#1b0f3d;font-family:var(--display);font-weight:700;flex:0 0 auto;box-shadow:0 0 0 3px rgba(255,255,255,.12)}
+.newprof{display:flex;gap:10px}
+.newprof input{flex:1;min-width:0;height:54px;border-radius:16px;border:1px solid var(--line);background:rgba(0,0,0,.28);color:var(--fg);
+  font:500 17px var(--body);padding:0 16px;-webkit-user-select:text;user-select:text;touch-action:manipulation}
+.newprof input::placeholder{color:var(--muted)}
+.newprof .btn{flex:0 0 auto;min-height:54px;font-size:18px}
+#pErr{color:var(--hot);min-height:1em}
+.who{display:flex;align-items:center;gap:12px}
+.who b{font:600 20px/1.1 var(--display);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* results */
 .stars{display:flex;justify-content:center;gap:10px;font-size:58px;line-height:1}
 .stars span{color:rgba(255,255,255,.14);transform:scale(.6);transition:transform .3s cubic-bezier(.2,1.8,.4,1),color .2s}
@@ -196,6 +215,11 @@ input[type=range]{width:150px;accent-color:var(--accent)}
 <!-- HOME -->
 <section class="screen" id="home">
   <div class="card">
+    <div class="who">
+      <span id="whoAva"></span>
+      <div class="grow"><div class="eyebrow">Now singing</div><b id="whoName"></b></div>
+      <button class="btn ghost" id="whoSwitch" style="min-height:42px;font-size:15px">Switch singer</button>
+    </div>
     <div>
       <div class="logo" id="logo">Pitch Pilot</div>
       <p class="tag" style="margin-top:10px">Sing the note. Fly through the gap.</p>
@@ -223,6 +247,20 @@ input[type=range]{width:150px;accent-color:var(--accent)}
   </div>
 </section>
 
+<!-- PROFILES -->
+<section class="screen" id="profiles" hidden>
+  <div class="card">
+    <div class="topbar"><button class="back" id="profBack" aria-label="Back">‹</button><h2>Who’s singing?</h2></div>
+    <div class="plist" id="plist"></div>
+    <form class="newprof" id="newProf" autocomplete="off">
+      <input type="text" id="pname" maxlength="16" placeholder="New singer’s name" aria-label="New singer’s name" autocapitalize="words" enterkeyhint="go" spellcheck="false">
+      <button class="btn primary" type="submit">Add</button>
+    </form>
+    <p class="small" id="pErr" role="alert"></p>
+    <p class="small muted">Everyone gets their own key, stars and rank, saved on this device. Pass the phone around!</p>
+  </div>
+</section>
+
 <!-- LEVELS -->
 <section class="screen" id="levels" hidden>
   <div class="card wide">
@@ -238,14 +276,17 @@ input[type=range]{width:150px;accent-color:var(--accent)}
     <div class="topbar"><button class="back" id="calBack" aria-label="Back">‹</button><h2>Find my key</h2></div>
     <div class="steps"><i id="st1"></i><i id="st2"></i><i id="st3"></i></div>
     <div id="calSing">
-      <p id="calPrompt" style="font-size:18px">Sing a <b>low</b> note that feels easy. Hold it on “ahh”.</p>
-      <div class="bignote" id="calNote" style="margin:18px 0 14px">…</div>
-      <div class="calbar"><i id="calFill"></i></div>
-      <p class="small muted center" id="calHint" style="margin-top:10px">Listening…</p>
+      <p id="calPrompt" style="font-size:17px"></p>
+    </div>
+    <canvas id="calViz" aria-hidden="true"></canvas>
+    <div id="calLive">
+      <div class="bignote" id="calNote">…</div>
+      <p class="small muted center" id="calHint" style="margin-top:6px;min-height:2.6em">Listening…</p>
+      <button class="btn ghost" id="calDemo" style="margin-top:8px;width:100%">Hear an example</button>
     </div>
     <div id="calDone" hidden>
-      <p style="font-size:18px">Your range: <b id="calRange"></b></p>
-      <p class="muted" style="margin-top:6px">Your scale starts on <b id="calRoot" style="color:var(--accent)"></b>. Hit play to hear it, then sing along.</p>
+      <p style="font-size:18px">Your scale: <b id="calRange" style="color:var(--accent)"></b></p>
+      <p class="muted" style="margin-top:6px">Every wall in the game is one of these eight notes. Play them once and sing along.</p>
       <div class="row" style="margin-top:16px">
         <button class="btn ghost" id="calHear">Hear my scale</button>
         <button class="btn primary" id="calOk">Let’s fly</button>
@@ -270,14 +311,14 @@ input[type=range]{width:150px;accent-color:var(--accent)}
     <div>
       <div class="set"><div class="lbl"><b>Note names</b><span>Solfège or letter names</span></div>
         <div class="seg" id="segLabels"><button data-v="solfege">do re mi</button><button data-v="letters">C D E</button></div></div>
-      <div class="set"><div class="lbl"><b>Hear each note first</b><span>A soft tone plays before each wall</span></div><button class="tog" id="togHints" aria-label="Hear each note first"></button></div>
+      <div class="set"><div class="lbl"><b>Hear each note first</b><span>Levels 6 and up. Levels 1–5 always play it.</span></div><button class="tog" id="togHints" aria-label="Hear each note first"></button></div>
       <div class="set"><div class="lbl"><b>Any octave counts</b><span>Sing the right note higher or lower and still pass</span></div><button class="tog" id="togFold" aria-label="Any octave counts"></button></div>
       <div class="set"><div class="lbl"><b>Zen drone</b><span>A calm hum in your key during Zen mode</span></div><button class="tog" id="togDrone" aria-label="Zen drone"></button></div>
       <div class="set"><div class="lbl"><b>Mic sensitivity</b><span>Raise it if quiet singing doesn’t register</span></div><input type="range" id="sens" min="0" max="1" step="0.05" aria-label="Mic sensitivity"></div>
       <div class="set"><div class="lbl"><b>Your key</b><span>Where “do” sits</span></div>
         <div class="keyctl"><button id="keyDown" aria-label="Lower key">−</button><output id="keyOut">C3</output><button id="keyUp" aria-label="Raise key">+</button></div></div>
       <div class="set"><div class="lbl"><b>Check it</b><span>Play your scale out loud</span></div><button class="btn ghost" id="hearScale" style="min-height:40px">Play scale</button></div>
-      <div class="set"><div class="lbl"><b>Reset progress</b><span>Stars, XP and unlocks</span></div><button class="btn ghost" id="resetBtn" style="min-height:40px">Reset</button></div>
+      <div class="set"><div class="lbl"><b>Reset progress</b><span id="resetLbl">Stars, XP and unlocks</span></div><button class="btn ghost" id="resetBtn" style="min-height:40px">Reset</button></div>
     </div>
   </div>
 </section>
@@ -335,7 +376,10 @@ input[type=range]{width:150px;accent-color:var(--accent)}
       <button class="btn ghost" id="rRetry">Retry</button>
       <button class="btn primary" id="rNext">Next level</button>
     </div>
-    <button class="btn ghost" id="rLevels">All levels</button>
+    <div class="row">
+      <button class="btn ghost" id="rLevels">All levels</button>
+      <button class="btn ghost" id="rPass">Pass to a friend</button>
+    </div>
   </div>
 </section>
 
@@ -353,11 +397,30 @@ function hexRgb(h){ const n = parseInt(h.slice(1), 16); return [(n>>16)&255, (n>
 const rgba = (h, a) => { const [r,g,b] = hexRgb(h); return `rgba(${r},${g},${b},${a})`; };
 
 /* ================= save data ================= */
-const KEY = 'pitchpilot.v1';
-const DEFAULTS = { root:null, low:null, high:null, labels:'solfege', hints:true, fold:true, drone:true, sens:0.5,
+const STORE_KEY = 'pitchpilot.v2', OLD_KEY = 'pitchpilot.v1';
+// Every profile carries its own key (root) and sung range (low/high), settings and progress.
+const DEFAULTS = { name:'', color:0, root:null, low:null, high:null, labels:'solfege', hints:true, fold:true, drone:true, sens:0.5,
   xp:0, stars:{}, best:{}, skin:'bubble', endlessBest:0 };
-let save = (() => { try { return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch(e){ return Object.assign({}, DEFAULTS); } })();
-function persist(){ try { localStorage.setItem(KEY, JSON.stringify(save)); } catch(e){} }
+const newId = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+function loadStore(){
+  let st = null;
+  try { st = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch(e){}
+  if (!st || typeof st.profiles !== 'object' || !Array.isArray(st.order)){
+    st = { profiles:{}, order:[], current:null };
+    try {
+      const old = JSON.parse(localStorage.getItem(OLD_KEY) || 'null');
+      if (old && (old.xp || old.root != null)){ const id = newId(); st.profiles[id] = Object.assign({}, old, { id, name:'Player 1', color:0 }); st.order.push(id); st.current = id; }
+    } catch(e){}
+  }
+  st.order = st.order.filter(id => st.profiles[id]);
+  st.order.forEach(id => { st.profiles[id] = Object.assign({}, DEFAULTS, st.profiles[id], { id }); });
+  if (!st.profiles[st.current]) st.current = null;
+  return st;
+}
+const store = loadStore();
+let save = store.current ? store.profiles[store.current] : Object.assign({}, DEFAULTS);
+function persist(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch(e){} }
+const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
 /* ================= music ================= */
 const SCALE = [0,2,4,5,7,9,11,12];
@@ -463,6 +526,11 @@ function tone(freq, dur, o = {}){
   osc.connect(g); g.connect(AU.out); osc.start(t); osc.stop(t + dur + 0.05);
 }
 function hintTone(semi){ const f = m2hz(root() + semi); tone(f, 0.38, { type:'triangle', gain:0.16 }); tone(f * 2, 0.3, { gain:0.03 }); gateMic(0.42); }
+function sampleTone(semi){ // clear, piano-ish demo of the note to sing (early levels)
+  const f = m2hz(root() + semi);
+  tone(f, 0.9, { type:'triangle', gain:0.2, attack:0.01 }); tone(f, 0.9, { gain:0.08 }); tone(f * 2, 0.5, { gain:0.04 });
+  gateMic(0.92);
+}
 function chime(semi, q){
   const b = root() + semi + 24;
   tone(m2hz(b), 0.28, { gain:0.06 });
@@ -585,8 +653,8 @@ cv.addEventListener('pointermove', e => { ptr.s = sOf(e.clientY); });
 cv.addEventListener('pointerdown', e => { ptr.s = sOf(e.clientY); });
 
 /* ================= UI helpers ================= */
-const screens = ['home','levels','calib','settings','micHelp','pause','results'];
-function show(id){ screens.forEach(s => { $('#' + s).hidden = s !== id; }); if (id === 'home') renderHome(); if (id === 'levels') renderLevels(); if (id === 'settings') renderSettings(); }
+const screens = ['profiles','home','levels','calib','settings','micHelp','pause','results'];
+function show(id){ screens.forEach(s => { $('#' + s).hidden = s !== id; }); if (id === 'home') renderHome(); if (id === 'levels') renderLevels(); if (id === 'settings') renderSettings(); if (id === 'profiles') renderProfiles(); }
 document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => { if (b.dataset.go === 'home') toMenu(); else show(b.dataset.go); }));
 const banner = $('#banner');
 function showBanner(html, stay){ banner.innerHTML = html; banner.className = ''; void banner.offsetWidth; banner.className = stay ? 'stay' : 'pop'; }
@@ -705,7 +773,7 @@ async function startLevel(i){
   renderLives(); renderScore(); renderProgress();
   const name = i === ENDLESS ? 'Endless' : `Level ${i + 1}`;
   const nm = i === ENDLESS ? 'How far can you sing?' : LEVELS[i].name;
-  showBanner(`${name}<small>${nm} · do = ${letterOct(root())}</small>`, true);
+  showBanner(`${name}<small>${esc(save.name || 'Guest')} · ${nm} · do = ${letterOct(root())}</small>`, true);
   countdown = 3; lastCount = -1;
   try { navigator.wakeLock && navigator.wakeLock.request('screen').then(l => { wake = l; }).catch(()=>{}); } catch(e){}
 }
@@ -721,8 +789,11 @@ function updatePlay(dt){
   for (const w of G.walls){
     w.flash = Math.max(0, w.flash - dt * 2.5);
     if (w.state === 'pending'){
-      const ahead = Math.min(1.6, G.every - 0.3);
-      if (save.hints && !w.hinted && w.t - G.t < ahead){ w.hinted = true; hintTone(w.s); }
+      const sample = G.level < 5;
+      if (!w.hinted && (sample || save.hints)){
+        const ahead = sample ? Math.min(2.3, G.every - 0.35) : Math.min(1.6, G.every - 0.3);
+        if (w.t - G.t < ahead){ w.hinted = true; w.listenUntil = G.t + (sample ? 0.9 : 0.4); sample ? sampleTone(w.s) : hintTone(w.s); }
+      }
       if (G.t >= w.t - hw) w.state = 'crossing';
     }
     if (w.state === 'crossing'){
@@ -846,67 +917,203 @@ function updateZen(dt){
 }
 
 /* ================= calibration ================= */
-const CAL = { step:0, prog:0, vals:[], low:null, high:null, then:null, silent:0 };
-async function startCalib(then){
+const CAL = { step:0, prog:0, vals:[], low:null, then:null, silent:0, live:null, demo:null, greet:false };
+const LOW_HOLD = 1.4, HIGH_HOLD = 1.2;
+async function startCalib(then, greet){
   ensureCtx(); CAL.then = then || (() => toMenu());
-  if (!(await startMic())){ pendingStart = () => startCalib(then); show('micHelp'); return; }
-  Object.assign(CAL, { step:0, prog:0, vals:[], low:null, high:null, silent:0 });
+  if (!(await startMic())){ pendingStart = () => startCalib(then, greet); show('micHelp'); return; }
+  Object.assign(CAL, { step:0, prog:0, vals:[], low:null, silent:0, live:null, demo:null, greet:!!greet });
   G.mode = 'calib'; show('calib');
-  $('#calSing').hidden = false; $('#calDone').hidden = true; $('#calQuick').open = false;
+  $('#calSing').hidden = false; $('#calLive').hidden = false; $('#calDone').hidden = true; $('#calQuick').open = false;
   calPrompt();
 }
 function calPrompt(){
-  $('#st1').className = CAL.step >= 0 ? 'on' : ''; $('#st2').className = CAL.step >= 1 ? 'on' : ''; $('#st3').className = CAL.step >= 2 ? 'on' : '';
-  $('#calPrompt').innerHTML = CAL.step === 0 ? 'Sing a <b>low</b> note that feels easy. Hold it on “ahh”.' : 'Now a <b>high</b> note that still feels comfortable. Hold it.';
-  $('#calFill').style.width = '0'; $('#calNote').textContent = '…'; $('#calNote').style.color = '';
+  ['#st1','#st2','#st3'].forEach((s, i) => { $(s).className = CAL.step >= i ? 'on' : ''; });
+  const hi = CAL.greet && CAL.step === 0 ? `Hi <b>${esc(save.name)}</b>! ` : '';
+  $('#calPrompt').innerHTML = CAL.step === 0
+    ? `${hi}Start at the <b>big circle on the left</b>: sing a low, easy note on “ahh” and hold it. That note becomes your <b>do</b>.`
+    : `Now the <b>big circle on the right</b>: sing the <b>same note, one octave higher</b>. Slide up do‑re‑mi if it helps.`;
+  $('#calDemo').textContent = CAL.step === 0 ? 'Hear an example' : 'Hear low do to high do';
+  $('#calNote').textContent = '…'; $('#calNote').style.color = '';
   $('#calHint').textContent = pointerMode ? 'Touch mode is on: pick a voice type below.' : 'Listening…';
 }
+function calDemo(){
+  ensureCtx();
+  const base = CAL.step === 1 && CAL.low != null ? Math.round(CAL.low) : root(), gap = 0.42;
+  SCALE.forEach((s, i) => tone(m2hz(base + s), i === 0 || i === 7 ? 0.75 : 0.38, { type:'triangle', gain:0.16, when:i * gap }));
+  CAL.demo = { t0:nowS(), step:gap }; CAL.prog = 0; gateMic(SCALE.length * gap + 0.45);
+  $('#calHint').textContent = 'Listen: low do, up the scale, to the same note higher.';
+}
+$('#calDemo').addEventListener('click', calDemo);
+const semiOff = d => { const pc = ((d % 12) + 12) % 12; return pc > 6 ? pc - 12 : pc; };
 function updateCalib(dt){
   readPitch();
-  if (CAL.step > 1) return;
-  if (Pitch.voiced){
-    const m = Pitch.midi; CAL.vals.push(m); CAL.silent = 0;
-    const recent = CAL.vals.slice(-12), md = median(recent);
-    if (Math.abs(m - md) < 0.8) CAL.prog += dt; else CAL.prog = Math.max(0, CAL.prog - dt);
-    $('#calNote').textContent = letterOct(m); $('#calNote').style.color = LANE[(Math.round(m) % 8 + 8) % 8];
-    $('#calHint').textContent = 'Hold it…';
-  } else { CAL.silent += dt; CAL.prog = Math.max(0, CAL.prog - dt * 0.6); if (CAL.silent > 0.5){ $('#calHint').textContent = 'Listening…'; } if (CAL.silent > 1.2) CAL.vals = []; }
-  $('#calFill').style.width = Math.min(100, CAL.prog / 1.4 * 100) + '%';
-  if (CAL.prog >= 1.4){
-    const v = median(CAL.vals.slice(-40));
-    if (CAL.step === 0){ CAL.low = v; CAL.step = 1; CAL.prog = 0; CAL.vals = []; tone(m2hz(Math.round(v) + 24), 0.2, { gain:0.06 }); gateMic(0.3); calPrompt(); }
-    else {
-      CAL.high = v; let lo = Math.min(CAL.low, CAL.high), hi = Math.max(CAL.low, CAL.high);
-      if (hi - lo < 3){ CAL.step = 1; CAL.prog = 0; CAL.vals = []; $('#calHint').textContent = 'That was close to your low note. Try a higher one.'; return; }
-      CAL.step = 2; calPrompt();
-      const center = (lo + hi) / 2; let r = Math.round(center - 6);
-      r = clamp(r, 36, 67);
-      save.low = lo; save.high = hi; save.root = r; persist();
-      tone(m2hz(Math.round(v) + 24), 0.2, { gain:0.06 }); gateMic(0.3);
-      calDone();
+  if (CAL.step <= 1){
+    const v = Pitch.voiced ? Pitch.midi : null; CAL.live = v;
+    if (v != null){
+      CAL.silent = 0;
+      $('#calNote').textContent = letterOct(v);
+      $('#calNote').style.color = CAL.step === 0 ? LANE[0] : laneColorAt(clamp(v - CAL.low, 0, 12));
+      if (CAL.step === 0){
+        CAL.vals.push(v); const md = median(CAL.vals.slice(-12));
+        if (Math.abs(v - md) < 0.8){ CAL.prog += dt; $('#calHint').textContent = 'Nice, hold it…'; } else CAL.prog = Math.max(0, CAL.prog - dt);
+        if (CAL.prog >= LOW_HOLD){
+          CAL.low = median(CAL.vals.slice(-40)); CAL.step = 1; CAL.prog = 0; CAL.vals = [];
+          tone(m2hz(Math.round(CAL.low) + 24), 0.2, { gain:0.06 }); gateMic(0.3); calPrompt();
+        }
+      } else {
+        const d = v - CAL.low, off = semiOff(d), on = d >= 11.3 && Math.abs(off) <= 0.6;
+        if (on){ CAL.vals.push(v); CAL.prog += dt; $('#calHint').textContent = d > 18 ? 'Same note, two octaves up. Hold it…' : 'That’s it! Hold it…'; }
+        else {
+          CAL.prog = Math.max(0, CAL.prog - dt * 0.7);
+          let h;
+          if (d < 0.6) h = d < -0.6 ? 'That’s below your low do. Go up ↑' : 'That’s your low do. Now climb to the same note, higher ↑';
+          else if (d < 11.3) h = `You’re on ${CHROM[Math.round(d) % 12]}. Keep going up ↑`;
+          else if (Math.abs(off) < 2.5) h = off > 0 ? 'Just above it. Come down a little ↓' : 'Almost! A little higher ↑';
+          else h = 'Not the same note yet. Slide up from your low do and listen for it to match.';
+          $('#calHint').textContent = h;
+        }
+        if (CAL.prog >= HIGH_HOLD){
+          save.low = CAL.low; save.high = median(CAL.vals.slice(-40)); save.root = clamp(Math.round(CAL.low), 33, 72); persist();
+          tone(m2hz(save.root + 24), 0.2, { gain:0.06 }); tone(m2hz(save.root + 31), 0.3, { gain:0.05, when:0.08 }); gateMic(0.45);
+          calDone();
+        }
+      }
+    } else {
+      CAL.silent += dt; CAL.prog = Math.max(0, CAL.prog - dt * 0.6);
+      if (CAL.silent > 0.5 && !CAL.demo) $('#calHint').textContent = 'Listening…';
+      if (CAL.silent > 1.2 && CAL.step === 0) CAL.vals = [];
     }
+  }
+  drawCalViz();
+}
+function drawCalViz(){
+  const c = $('#calViz'); if (!c || c.offsetParent === null) return;
+  const w = c.clientWidth, h = c.clientHeight, dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)){ c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+  const x = c.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, w, h);
+  const t = nowS(), R = clamp(w * 0.055, 19, 28), r = clamp(w * 0.018, 7, 10);
+  const pad = R + 10, yTop = R + 12, yBot = h - R - 24;
+  const P = SCALE.map((s, i) => ({ x:pad + (w - 2 * pad) * i / 7, y:yBot - (yBot - yTop) * s / 12 }));
+  let d = null;
+  if (CAL.live != null && CAL.step === 1){ d = CAL.live - CAL.low; while (d > 12.6) d -= 12; }
+  let demoIdx = -1;
+  if (CAL.demo){ const k = Math.floor((t - CAL.demo.t0) / CAL.demo.step); if (k >= 0 && k < 8) demoIdx = k; else if (k >= 9) CAL.demo = null; }
+  x.strokeStyle = 'rgba(196,178,255,.25)'; x.lineWidth = 2; x.setLineDash([4, 6]);
+  x.beginPath(); P.forEach((p, i) => i ? x.lineTo(p.x, p.y) : x.moveTo(p.x, p.y)); x.stroke(); x.setLineDash([]);
+  x.textAlign = 'center';
+  P.forEach((p, i) => {
+    const big = i === 0 || i === 7, rad = big ? R : r, col = LANE[i];
+    let st = 'idle';
+    if (CAL.step >= 2) st = 'done';
+    else if (CAL.step === 0) st = i === 0 ? 'active' : 'idle';
+    else if (i === 0) st = 'done';
+    else if (i === 7) st = 'active';
+    else if (d != null && d >= SCALE[i] - 0.5) st = 'lit';
+    if (i === demoIdx) st = 'demo';
+    if (st !== 'idle'){
+      const a = st === 'active' ? 0.22 + 0.14 * Math.sin(t * 5) : 0.5;
+      const g = x.createRadialGradient(p.x, p.y, 0, p.x, p.y, rad * 2.3); g.addColorStop(0, rgba(col, a)); g.addColorStop(1, rgba(col, 0));
+      x.fillStyle = g; x.beginPath(); x.arc(p.x, p.y, rad * 2.3, 0, 7); x.fill();
+    }
+    x.beginPath(); x.arc(p.x, p.y, rad, 0, 7);
+    if (st === 'done' || st === 'lit' || st === 'demo'){ x.fillStyle = col; x.fill(); }
+    else {
+      x.fillStyle = st === 'active' && CAL.live != null ? rgba(col, 0.5) : 'rgba(255,255,255,.06)'; x.fill();
+      x.strokeStyle = st === 'active' ? col : 'rgba(255,255,255,.28)'; x.lineWidth = st === 'active' ? 3 : 1.5; x.stroke();
+    }
+    if (st === 'active' && CAL.prog > 0){
+      const f = clamp(CAL.prog / (CAL.step === 0 ? LOW_HOLD : HIGH_HOLD), 0, 1);
+      x.strokeStyle = '#fff'; x.lineWidth = 4; x.lineCap = 'round';
+      x.beginPath(); x.arc(p.x, p.y, rad + 7, -Math.PI / 2, -Math.PI / 2 + f * Math.PI * 2); x.stroke();
+    }
+    x.fillStyle = st === 'idle' ? 'rgba(255,255,255,.5)' : '#fff'; x.textBaseline = 'top';
+    x.font = `600 ${big ? 15 : 12}px Fredoka, system-ui, sans-serif`;
+    x.fillText(big ? (i ? 'high do' : 'low do') : SOLF[i], p.x, p.y + rad + (big ? 7 : 5));
+    if (big){
+      const base = CAL.step >= 2 ? root() : CAL.low != null ? Math.round(CAL.low) : null;
+      x.textBaseline = 'middle'; x.font = '700 12px DM Sans, system-ui, sans-serif';
+      x.fillStyle = st === 'idle' || (st === 'active' && CAL.live == null) ? 'rgba(255,255,255,.75)' : '#1b0f3d';
+      x.fillText(base != null ? letterOct(base + (i ? 12 : 0)) : (i ? 'end' : 'start'), p.x, p.y + 1);
+    }
+  });
+  if (d != null){
+    const dd = clamp(d, -1, 12.6);
+    let k = 0; while (k < 7 && SCALE[k + 1] <= dd) k++;
+    const k2 = Math.min(7, k + 1), f = SCALE[k2] > SCALE[k] ? clamp((dd - SCALE[k]) / (SCALE[k2] - SCALE[k]), 0, 1) : 0;
+    const px = dd < 0 ? P[0].x : P[k].x + (P[k2].x - P[k].x) * f, py = yBot - (yBot - yTop) * dd / 12;
+    const g = x.createRadialGradient(px, py, 0, px, py, 18); g.addColorStop(0, 'rgba(255,255,255,.8)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g; x.beginPath(); x.arc(px, py, 18, 0, 7); x.fill();
+    x.fillStyle = '#fff'; x.beginPath(); x.arc(px, py, 6, 0, 7); x.fill();
   }
 }
 function calDone(){
-  $('#calSing').hidden = true; $('#calDone').hidden = false;
-  $('#calRange').textContent = save.low != null ? `${letterOct(save.low)} to ${letterOct(save.high)}` : 'set by voice type';
-  $('#calRoot').textContent = `do = ${letterOct(root())}`;
-  G.mode = 'calibDone';
+  CAL.step = 2; CAL.live = null; ['#st1','#st2','#st3'].forEach(s => { $(s).className = 'on'; });
+  $('#calSing').hidden = true; $('#calLive').hidden = true; $('#calDone').hidden = false;
+  $('#calRange').textContent = `do = ${letterOct(root())} up to ${letterOct(root() + 12)}`;
+  G.mode = 'calib';
 }
-$('#calHear').addEventListener('click', playScale);
+$('#calHear').addEventListener('click', () => { playScale(); CAL.demo = { t0:nowS(), step:0.45 }; });
 $('#calOk').addEventListener('click', () => { const t = CAL.then; CAL.then = null; G.mode = 'menu'; t ? t() : toMenu(); });
 $('#calBack').addEventListener('click', () => toMenu());
 document.querySelectorAll('[data-root]').forEach(b => b.addEventListener('click', () => {
-  ensureCtx(); save.root = +b.dataset.root; save.low = null; save.high = null; persist(); calDone();
+  ensureCtx(); save.root = +b.dataset.root; save.low = null; save.high = null; persist(); calDone(); drawCalViz();
 }));
 
 /* ================= menus ================= */
 function toMenu(){
   G.mode = 'menu'; G.paused = false; $('#hud').hidden = true; hideBanner(); droneOff();
   if (wake){ wake.release().catch(()=>{}); wake = null; }
-  show('home');
+  show(store.current ? 'home' : 'profiles');
 }
+const profileColor = p => LANE[(p.color || 0) % 8];
+const avatarHTML = (p, size) => `<span class="ava" style="--c:${profileColor(p)};width:${size}px;height:${size}px;font-size:${Math.round(size * 0.46)}px">${esc(([...p.name.trim()][0] || '?').toUpperCase())}</span>`;
+function switchTo(id){ store.current = id; save = store.profiles[id]; persist(); }
+function createProfile(raw){
+  const name = String(raw || '').replace(/\s+/g, ' ').trim();
+  if (!name) return 'Type a name first.';
+  if ([...name].length > 16) return 'Keep it to 16 characters.';
+  if (store.order.some(id => store.profiles[id].name.toLowerCase() === name.toLowerCase())) return `${name} is already here. Pick another name.`;
+  const used = store.order.map(i => store.profiles[i].color);
+  let color = store.order.length % 8; for (let c = 0; c < 8; c++) if (!used.includes(c)){ color = c; break; }
+  const id = newId(); store.profiles[id] = Object.assign({}, DEFAULTS, { id, name, color, stars:{}, best:{} }); store.order.push(id);
+  switchTo(id); return null;
+}
+function deleteProfile(id){
+  delete store.profiles[id]; store.order = store.order.filter(i => i !== id);
+  if (store.current === id){ store.current = null; save = Object.assign({}, DEFAULTS); }
+  persist();
+}
+let delArmed = null;
+function renderProfiles(){
+  $('#profBack').hidden = !store.current;
+  const list = $('#plist'); list.innerHTML = '';
+  if (!store.order.length) list.innerHTML = '<p class="muted">Add a name for each person who’ll play.</p>';
+  store.order.forEach(id => {
+    const p = store.profiles[id], rk = RANKS[rankIndex(p.xp)], stars = Object.values(p.stars).reduce((a, b) => a + b, 0);
+    const row = document.createElement('div'); row.className = 'prow' + (id === store.current ? ' on' : '');
+    const pick = document.createElement('button'); pick.className = 'ppick';
+    const key = p.root != null ? `do = ${letterOct(p.root)}` : 'key not set yet';
+    pick.innerHTML = `${avatarHTML(p, 44)}<span class="grow"><b>${esc(p.name)}</b><span class="small muted">${rk.n} · ${stars}★ · ${key}</span></span>`;
+    pick.addEventListener('click', () => { delArmed = null; switchTo(id); if (p.root == null) startCalib(() => toMenu(), true); else toMenu(); });
+    const del = document.createElement('button'); del.className = 'pdel' + (delArmed === id ? ' armed' : '');
+    del.textContent = delArmed === id ? 'Delete' : '×'; del.setAttribute('aria-label', `Remove ${p.name}`);
+    del.addEventListener('click', () => { if (delArmed === id){ delArmed = null; deleteProfile(id); } else delArmed = id; renderProfiles(); });
+    row.append(pick, del); list.appendChild(row);
+  });
+  $('#pErr').textContent = '';
+}
+$('#newProf').addEventListener('submit', e => {
+  e.preventDefault();
+  const err = createProfile($('#pname').value);
+  if (err){ $('#pErr').textContent = err; return; }
+  $('#pname').value = ''; $('#pname').blur(); startCalib(() => toMenu(), true);
+});
+$('#profBack').addEventListener('click', () => { delArmed = null; toMenu(); });
+$('#whoSwitch').addEventListener('click', () => { delArmed = null; show('profiles'); });
+$('#rPass').addEventListener('click', () => { G.mode = 'menu'; show('profiles'); });
 function renderHome(){
+  $('#whoAva').innerHTML = avatarHTML(save, 46); $('#whoName').textContent = save.name || 'Guest';
   const r = rankIndex(save.xp), R = RANKS[r], N = RANKS[r + 1];
   $('#rankBadge').textContent = r + 1; $('#rankName').textContent = R.n;
   $('#xpFill').style.width = N ? (100 * (save.xp - R.xp) / (N.xp - R.xp)) + '%' : '100%';
@@ -940,6 +1147,7 @@ function renderSettings(){
   $('#togHints').classList.toggle('on', save.hints); $('#togFold').classList.toggle('on', save.fold); $('#togDrone').classList.toggle('on', save.drone);
   $('#sens').value = save.sens; $('#keyOut').textContent = letterOct(root());
   $('#resetBtn').textContent = 'Reset'; resetArmed = false;
+  $('#resetLbl').textContent = `${save.name || 'This singer'}’s stars, XP and unlocks`;
 }
 let resetArmed = false;
 document.querySelectorAll('#segLabels button').forEach(b => b.addEventListener('click', () => { save.labels = b.dataset.v; persist(); renderSettings(); }));
@@ -989,6 +1197,7 @@ function updateTuner(){
       else txt = d < 0 ? `higher ↑ ${laneLabel(next.lane)}` : `lower ↓ ${laneLabel(next.lane)}`;
     } else { const c = Math.round(d); txt = Math.abs(c) <= 10 ? 'in tune' : (c > 0 ? '+' : '') + c + '¢'; ok = Math.abs(c) <= 20; }
   } else if (next) txt = `next: ${laneLabel(next.lane)}`;
+  if (next && next.listenUntil && G.t < next.listenUntil){ txt = `listen: ${laneLabel(next.lane)}`; ok = false; }
   needle.style.transform = `translateX(${(pos / 200) * $('#tnNeedle').parentElement.clientWidth}px)`;
   needle.style.background = sung == null ? 'rgba(255,255,255,.3)' : ok ? '#7bed6f' : '#fff';
   const t = nowS(); const key = note + txt + ok;
@@ -1050,6 +1259,13 @@ function drawWalls(){
       const label = laneLabel(w.lane); ctx.font = `700 ${clamp(pxSemi * 0.85, 13, 19)}px Fredoka, system-ui, sans-serif`;
       const tw = ctx.measureText(label).width + 16, lx = x0 + th + 8;
       ctx.fillStyle = col; roundRect(lx, cy - 12, tw, 24, 12); ctx.fill();
+      if (w.listenUntil && G.t < w.listenUntil){
+        const k = 1 - (w.listenUntil - G.t) / 0.9, grow = 4 + k * 10;
+        ctx.strokeStyle = rgba(col, 1 - k); ctx.lineWidth = 3; roundRect(lx - grow, cy - 12 - grow, tw + grow * 2, 24 + grow * 2, 12 + grow); ctx.stroke();
+        ctx.font = '700 14px Fredoka, system-ui, sans-serif'; ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle';
+        ctx.fillText('♪ listen', lx, cy - 30);
+        ctx.font = `700 ${clamp(pxSemi * 0.85, 13, 19)}px Fredoka, system-ui, sans-serif`;
+      }
       ctx.fillStyle = '#1b0f3d'; ctx.textBaseline = 'middle'; ctx.fillText(label, lx + 8, cy + 1);
     }
   }
@@ -1116,10 +1332,11 @@ window.PitchPilot = {
   setFakeMidi(m){ fakeMidi = m; },
   root, state:() => ({ mode:G.mode, t:G.t, lives:G.lives, score:G.score, tally:Object.assign({}, G.tally), walls:G.walls.map(w => ({ s:w.s, t:w.t, state:w.state })) }),
   start:i => startLevel(i), zen:() => startZen(), save:() => save, Yin,
+  addProfile:n => { const e = createProfile(n); if (!e) toMenu(); return e; }, calib:() => startCalib(() => toMenu(), true), cal:() => Object.assign({}, CAL, { then:undefined }),
   pitch:() => Object.assign({}, Pitch, { hist:undefined })
 };
 
-resize(); show('home'); requestAnimationFrame(loop);
+resize(); show(store.current ? 'home' : 'profiles'); requestAnimationFrame(loop);
 })();
 </script>
 </body>
