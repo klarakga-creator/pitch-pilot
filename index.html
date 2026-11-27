@@ -23,6 +23,7 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--body);overflow:hidden;
   -webkit-user-select:none;user-select:none;touch-action:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
 [hidden]{display:none!important}
@@ -126,13 +127,13 @@ input[type=range]{width:150px;accent-color:var(--accent)}
 .steps i.on{background:var(--accent)}
 .quick{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
 
-#calViz{width:calc(100% + 2 * var(--pad));margin:-6px calc(-1 * var(--pad));height:232px;display:block;max-width:none}
+#calViz{width:calc(100% + 2 * var(--pad));margin:-6px calc(-1 * var(--pad));height:clamp(176px,32vh,232px);display:block;max-width:none}
 /* profiles */
 .plist{display:flex;flex-direction:column;gap:8px}
 .prow{display:flex;align-items:center;gap:6px;border-radius:18px;background:var(--panel2);border:1px solid var(--line)}
 .prow.on{border-color:var(--accent);background:rgba(255,212,59,.1)}
 .ppick{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:10px 12px;text-align:left;border-radius:18px}
-.ppick b{display:block;font:600 18px/1.2 var(--display);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ppick b{display:block;font:600 18px/1.2 var(--display);overflow-wrap:anywhere}
 .ppick .small{display:block}
 .pdel{flex:0 0 auto;min-width:44px;height:44px;margin-right:6px;border-radius:12px;color:var(--muted);font:600 20px/1 var(--display)}
 .pdel.armed{background:var(--hot);color:#fff;font-size:14px;padding:0 12px}
@@ -144,7 +145,8 @@ input[type=range]{width:150px;accent-color:var(--accent)}
 .newprof .btn{flex:0 0 auto;min-height:54px;font-size:18px}
 #pErr{color:var(--hot);min-height:1em}
 .who{display:flex;align-items:center;gap:12px}
-.who b{font:600 20px/1.1 var(--display);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who b{font:600 20px/1.15 var(--display);display:block;overflow-wrap:anywhere}
+.who .eyebrow{white-space:nowrap}
 /* results */
 .stars{display:flex;justify-content:center;gap:10px;font-size:58px;line-height:1}
 .stars span{color:rgba(255,255,255,.14);transform:scale(.6);transition:transform .3s cubic-bezier(.2,1.8,.4,1),color .2s}
@@ -180,9 +182,9 @@ input[type=range]{width:150px;accent-color:var(--accent)}
 .tn-cents{font:600 14px/1.1 var(--body);min-width:104px;text-align:right;color:var(--muted)}
 .tn-cents.ok{color:var(--good)}
 #feedback{position:absolute;left:50%;bottom:calc(76px + var(--sab));transform:translateX(-50%);padding:8px 16px;border-radius:14px;
-  background:rgba(255,93,115,.92);color:#fff;font-weight:700;white-space:nowrap;opacity:0;transition:opacity .25s;max-width:calc(100% - 28px);overflow:hidden;text-overflow:ellipsis}
+  background:rgba(255,93,115,.92);color:#fff;font-weight:700;text-align:center;width:max-content;opacity:0;transition:opacity .25s;max-width:calc(100% - 28px)}
 #feedback.show{opacity:1}
-#banner{position:fixed;left:0;right:0;top:38%;text-align:center;pointer-events:none;font:700 clamp(40px,10vw,84px)/1 var(--display);
+#banner{position:fixed;left:0;right:0;top:38%;padding:0 max(18px,var(--sal)) 0 max(18px,var(--sar));text-wrap:balance;text-align:center;pointer-events:none;font:700 clamp(40px,10vw,84px)/1 var(--display);
   text-shadow:0 6px 30px rgba(0,0,0,.5);opacity:0}
 #banner small{display:block;font:500 18px/1.4 var(--body);color:var(--muted);margin-top:10px;text-shadow:none}
 #banner.pop{animation:pop 1s ease-out forwards}
@@ -190,6 +192,30 @@ input[type=range]{width:150px;accent-color:var(--accent)}
 @keyframes pop{0%{opacity:0;transform:scale(.6)}15%{opacity:1;transform:scale(1.08)}30%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:scale(1.05)}}
 #zenInfo{position:absolute;top:calc(14px + var(--sat));left:50%;transform:translateX(-50%);font:600 16px/1 var(--display);color:var(--muted)}
 
+@media (max-width:440px){
+  .who{flex-wrap:wrap}
+  .who .btn{flex:1 1 100%;min-height:40px}
+  .set{flex-wrap:wrap;gap:8px 14px}
+  .set .lbl{flex:1 1 100%}
+  .set:has(.tog) .lbl{flex:1 1 0}
+  .set:has(.tog){flex-wrap:nowrap}
+  .set input[type=range]{flex:1;width:auto}
+  .tuner{gap:10px;padding:8px 10px}
+  .tn-note{font-size:22px;min-width:48px}
+  .tn-cents{min-width:0;font-size:13px}
+  #banner small{font-size:15px}
+  .topbar h2{font-size:24px}
+}
+@media (max-height:760px){
+  .card{gap:13px}
+  .stars{font-size:44px}
+  .stat{padding:8px}
+  .stat b{font-size:22px}
+  #resTitle{font-size:32px!important}
+  .btn{min-height:48px}
+  .btn.primary{min-height:56px;font-size:20px}
+  .logo{font-size:clamp(44px,11vw,72px)}
+}
 @media (prefers-reduced-motion:reduce){.logo span{animation:none}.card{animation:none}}
 </style>
 </head>
@@ -255,7 +281,7 @@ input[type=range]{width:150px;accent-color:var(--accent)}
     <div class="topbar"><button class="back" id="profBack" aria-label="Back">‹</button><h2>Who’s singing?</h2></div>
     <div class="plist" id="plist"></div>
     <form class="newprof" id="newProf" autocomplete="off">
-      <input type="text" id="pname" maxlength="16" placeholder="New singer’s name" aria-label="New singer’s name" autocapitalize="words" enterkeyhint="go" spellcheck="false">
+      <input type="text" id="pname" maxlength="16" placeholder="Add a name" aria-label="New singer’s name" autocapitalize="words" enterkeyhint="go" spellcheck="false">
       <button class="btn primary" type="submit">Add</button>
     </form>
     <p class="small" id="pErr" role="alert"></p>
@@ -1239,7 +1265,7 @@ function drawCalViz(){
   const x = c.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, w, h);
   const t = nowS(), R = clamp(w * 0.05, 17, 26), r = clamp(w * 0.018, 7, 10);
   const GLOW = 1.9, GR = R * GLOW;                  // big-circle glow radius; every glow fits inside the canvas
-  const pad = GR + 4, yTop = GR + 4, yBot = h - Math.max(GR, R + 30) - 4;
+  const pad = GR + 4, yTop = Math.max(GR + 4, R + 28), yBot = h - Math.max(GR, R + 30) - 4;
   const P = SCALE.map((s, i) => ({ x:pad + (w - 2 * pad) * i / 7, y:yBot - (yBot - yTop) * s / 12 }));
   let d = null;
   if (CAL.live != null && CAL.step === 1){ d = CAL.live - CAL.low; while (d > 12.6) d -= 12; }
@@ -1276,7 +1302,8 @@ function drawCalViz(){
     }
     x.fillStyle = st === 'idle' ? 'rgba(255,255,255,.5)' : '#fff'; x.textBaseline = 'top';
     x.font = `600 ${big ? 15 : 12}px Fredoka, system-ui, sans-serif`;
-    x.fillText(big ? (i ? 'high do' : 'low do') : SOLF[i], p.x, p.y + rad + (big ? 7 : 5));
+    if (i === 7){ x.textBaseline = 'bottom'; x.fillText('high do', p.x, p.y - rad - 6); }
+    else x.fillText(big ? 'low do' : SOLF[i], p.x, p.y + rad + (big ? 7 : 5));
     if (big){
       const base = CAL.step >= 2 ? root() : CAL.low != null ? Math.round(CAL.low) : null;
       x.textBaseline = 'middle'; x.font = '700 12px DM Sans, system-ui, sans-serif';
