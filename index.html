@@ -91,6 +91,7 @@ p{margin:0}
 .lvl .ds{font-size:12.5px;color:var(--muted);flex:1}
 .lvl .st{font-size:18px;letter-spacing:2px;color:var(--accent)}
 .lvl .st .off{color:rgba(255,255,255,.18)}
+.lvl .spd{align-self:flex-start;font:700 11px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;color:#ff9f43;background:rgba(255,159,67,.14);padding:5px 8px;border-radius:8px}
 .lvl[disabled]{opacity:.42;cursor:not-allowed;box-shadow:none}
 .lvl.endless{background:linear-gradient(135deg,rgba(255,93,115,.18),rgba(155,123,255,.18))}
 .topbar{display:flex;align-items:center;gap:12px}
@@ -341,6 +342,7 @@ input[type=range]{width:150px;accent-color:var(--accent)}
 <section class="screen" id="pause" hidden>
   <div class="card" style="width:min(380px,100%)">
     <h2 class="center" style="font-size:34px">Paused</h2>
+    <p class="center small muted">Press space to keep going</p>
     <button class="btn primary" id="resumeBtn">Resume</button>
     <button class="btn ghost" id="restartBtn">Restart</button>
     <button class="btn ghost" id="quitBtn">Quit</button>
@@ -599,18 +601,18 @@ function skipWalk(n, max){ let l = ri(8), out = []; for (let i = 0; i < n; i++){
 function pick(pool, n){ let out = [], p = -1; for (let i = 0; i < n; i++){ let l; do { l = pool[ri(pool.length)]; } while (l === p && pool.length > 1); out.push(l); p = l; } return out; }
 const UPDOWN = [0,1,2,3,4,5,6,7,6,5,4,3,2,1,0];
 const LEVELS = [
-  { name:'First Notes', desc:'Only do, mi and sol. Take your time.', tol:60, every:3.4, gen:() => pick([0,2,4], 10) },
-  { name:'Climb', desc:'Step up from do to sol and back.', tol:55, every:3.1, gen:() => [0,1,2,3,4,3,2,1,0,1,2,3,4] },
-  { name:'The Scale', desc:'Do re mi fa sol la ti do. All of it.', tol:50, every:2.9, gen:() => UPDOWN.slice() },
-  { name:'Wander', desc:'Step by step, anywhere in the scale.', tol:50, every:2.8, gen:() => stepWalk(16) },
-  { name:'Twinkle', desc:'A tune you already know.', tol:45, every:2.6, gen:() => [0,0,4,4,5,5,4,3,3,2,2,1,1,0] },
-  { name:'Triads', desc:'Hop do, mi, sol, high do.', tol:45, every:2.6, gen:() => [0,2,4,7,4,2,0,2,4,7,7,4,2,0] },
-  { name:'Frère Jacques', desc:'The round, sung solo.', tol:42, every:2.4, gen:() => [0,1,2,0,0,1,2,0,2,3,4,2,3,4] },
-  { name:'Skips', desc:'Jumps of up to a fourth.', tol:40, every:2.4, gen:() => skipWalk(18, 3) },
-  { name:'Ode to Joy', desc:'Beethoven, one wall at a time.', tol:38, every:2.2, gen:() => [2,2,3,4,4,3,2,1,0,0,1,2,2,1,1] },
-  { name:'Leaps', desc:'Any note can follow any note.', tol:35, every:2.3, gen:() => pick([0,1,2,3,4,5,6,7], 18) },
-  { name:'Quick Scale', desc:'The full scale, up and down, fast.', tol:30, every:1.7, gen:() => UPDOWN.concat(UPDOWN.slice(1)) },
-  { name:'Maestro', desc:'Fast leaps, tight gaps.', tol:25, every:1.9, gen:() => pick([0,1,2,3,4,5,6,7], 24) },
+  { name:'First Notes', speed:1.0, desc:'Only do, mi and sol. Take your time.', tol:60, every:3.4, gen:() => pick([0,2,4], 10) },
+  { name:'Climb', speed:1.0, desc:'Step up from do to sol and back.', tol:55, every:3.1, gen:() => [0,1,2,3,4,3,2,1,0,1,2,3,4] },
+  { name:'The Scale', speed:1.05, desc:'Do re mi fa sol la ti do. All of it.', tol:50, every:2.9, gen:() => UPDOWN.slice() },
+  { name:'Wander', speed:1.1, desc:'Step by step, anywhere in the scale.', tol:50, every:2.8, gen:() => stepWalk(16) },
+  { name:'Twinkle', speed:1.1, desc:'A tune you already know.', tol:45, every:2.6, gen:() => [0,0,4,4,5,5,4,3,3,2,2,1,1,0] },
+  { name:'Triads', speed:1.15, desc:'Hop do, mi, sol, high do.', tol:45, every:2.6, gen:() => [0,2,4,7,4,2,0,2,4,7,7,4,2,0] },
+  { name:'Frère Jacques', speed:1.2, ramp:0.8, desc:'The round, sung solo.', tol:42, every:2.4, gen:() => [0,1,2,0,0,1,2,0,2,3,4,2,3,4] },
+  { name:'Skips', speed:1.25, desc:'Jumps of up to a fourth.', tol:40, every:2.4, gen:() => skipWalk(18, 3) },
+  { name:'Ode to Joy', speed:1.3, ramp:0.8, desc:'Beethoven, one wall at a time.', tol:38, every:2.2, gen:() => [2,2,3,4,4,3,2,1,0,0,1,2,2,1,1] },
+  { name:'Leaps', speed:1.35, desc:'Any note can follow any note.', tol:35, every:2.3, gen:() => pick([0,1,2,3,4,5,6,7], 18) },
+  { name:'Quick Scale', speed:1.5, ramp:0.75, desc:'The full scale, up and down, fast.', tol:30, every:1.7, gen:() => UPDOWN.concat(UPDOWN.slice(1)) },
+  { name:'Maestro', speed:1.6, ramp:0.8, desc:'Fast leaps, tight gaps.', tol:25, every:1.9, gen:() => pick([0,1,2,3,4,5,6,7], 24) },
 ];
 const ENDLESS = LEVELS.length;
 const RANKS = [ { n:'Hummer', xp:0 }, { n:'Crooner', xp:400 }, { n:'Songbird', xp:1200 }, { n:'Diva', xp:3000 }, { n:'Maestro', xp:6000 } ];
@@ -619,17 +621,33 @@ function rankIndex(xp){ let r = 0; RANKS.forEach((k, i) => { if (xp >= k.xp) r =
 function isUnlocked(i){ if (i === 0) return true; if (i === ENDLESS) return (save.stars[5] || 0) >= 2; return (save.stars[i - 1] || 0) >= 2; }
 
 /* ================= game state ================= */
-const G = { mode:'menu', paused:false, level:0, walls:[], t:0, tol:50, every:3, score:0, combo:0, best:0, lives:3,
+const G = { mode:'menu', paused:false, speed:1, level:0, walls:[], t:0, tol:50, every:3, score:0, combo:0, best:0, lives:3,
   tally:{ p:0, g:0, o:0, x:0 }, errSum:0, errN:0, shake:0, endT:0, ended:false, zenCount:0, zenNext:0, zenLane:0 };
 const ch = { s:4, vs:0, raw:null, lastVoice:0, sinkV:0, col:LANE[2], blink:0 };
 const fx = { parts:[], texts:[], trail:[], stars:[] };
 
 /* ================= canvas / layout ================= */
 const cv = $('#game'), ctx = cv.getContext('2d', { alpha:false });
-let W, H, DPR, top0, bot0, pxSemi, charX, pps, look, thickPx, charR, safeT = 0, safeB = 0;
+let W, H, DPR, top0, bot0, pxUnit, charX, pps, look, thickPx, charR, safeT = 0, safeB = 0;
 const S_MIN = -2, S_MAX = 14;
-const yOf = s => bot0 - (s - S_MIN) * pxSemi;
-const sOf = y => S_MIN + (bot0 - y) / pxSemi;
+// Lanes are evenly spaced by scale step, so mi–fa and ti–do (half steps) look as far apart as whole steps.
+// U() maps semitones above do to lane units; collisions still use real cents.
+function U(s){
+  if (s <= 0) return s / 2;
+  if (s >= 12) return 7 + (s - 12) / 2;
+  let k = 0; while (k < 6 && SCALE[k + 1] <= s) k++;
+  return k + (s - SCALE[k]) / (SCALE[k + 1] - SCALE[k]);
+}
+function Uinv(u){
+  if (u <= 0) return u * 2;
+  if (u >= 7) return 12 + (u - 7) * 2;
+  const k = Math.floor(u); return SCALE[k] + (u - k) * (SCALE[k + 1] - SCALE[k]);
+}
+const U_MIN = U(S_MIN), U_MAX = U(S_MAX);
+const yOf = s => bot0 - (U(s) - U_MIN) * pxUnit;
+const sOf = y => Uinv(U_MIN + (bot0 - y) / pxUnit);
+const vel = () => pps * G.speed;          // current scroll speed in px/s
+const lookNow = () => look / G.speed;     // seconds a wall is on screen before reaching you
 function resize(){
   DPR = Math.min(2, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight;
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -637,12 +655,12 @@ function resize(){
   const probe = document.createElement('div'); probe.style.cssText = 'position:fixed;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden';
   document.body.appendChild(probe); const ps = getComputedStyle(probe); safeT = parseFloat(ps.paddingTop) || 0; safeB = parseFloat(ps.paddingBottom) || 0; probe.remove();
   top0 = 66 + safeT; bot0 = H - 78 - safeB;
-  pxSemi = (bot0 - top0) / (S_MAX - S_MIN);
+  pxUnit = (bot0 - top0) / (U_MAX - U_MIN);
   charX = Math.max(74, W * 0.22);
   look = clamp((W - charX) / 230, 1.9, 3.4);
   pps = (W - charX + 40) / look;
   thickPx = clamp(pps * 0.13, 22, 40);
-  charR = clamp(pxSemi * 0.42, 9, 20);
+  charR = clamp(pxUnit * 0.3, 9, 20);
   if (!fx.stars.length) for (let i = 0; i < 90; i++) fx.stars.push({ x:Math.random(), y:Math.random(), z:rand(0.2, 1), tw:rand(0, 6) });
 }
 addEventListener('resize', resize);
@@ -740,25 +758,32 @@ function updateChar(dt, ref){
   // trail
   const step = SKINS.findIndex(k => k.id === save.skin);
   const tc = save.skin === 'comet' ? LANE[Math.floor(t * 8) % 8] : ch.col;
-  if (Pitch.voiced || pointerMode){ fx.parts.push({ x:charX - charR * 0.6, y:yOf(ch.s) + rand(-3, 3), vx:-pps * 0.9, vy:rand(-12, 12), life:0.55, max:0.55, col:tc, size:rand(2.5, 5) + step * 0.3 }); }
+  if (Pitch.voiced || pointerMode){ fx.parts.push({ x:charX - charR * 0.6, y:yOf(ch.s) + rand(-3, 3), vx:-vel() * 0.9, vy:rand(-12, 12), life:0.55, max:0.55, col:tc, size:rand(2.5, 5) + step * 0.3 }); }
 }
 
 /* ================= play ================= */
 function setupLevel(i){
   const L = LEVELS[i] || { tol:50, every:2.8 };
   Object.assign(G, { level:i, t:0, score:0, combo:0, best:0, lives:3, tally:{ p:0, g:0, o:0, x:0 }, errSum:0, errN:0, shake:0, ended:false, endT:0, paused:false });
-  G.tol = i === ENDLESS ? 55 : L.tol; G.every = i === ENDLESS ? 3.0 : L.every;
-  const start = 3 + look; // first wall arrives after a 3 s countdown + travel time
+  G.tol = i === ENDLESS ? 55 : L.tol; G.every = i === ENDLESS ? 3.0 : L.every; G.speed = i === ENDLESS ? 1.15 : (L.speed || 1);
+  const start = 3 + lookNow(); // first wall arrives after a 3 s countdown + travel time
   G.walls = [];
   if (i === ENDLESS){ G.nextT = start; G.prevLane = 2; fillEndless(); }
-  else L.gen().forEach((lane, k) => G.walls.push(mkWall(start + k * G.every, lane)));
+  else {
+    const lanes = L.gen(), n = lanes.length, ramp = L.ramp || 1; let t = start;
+    lanes.forEach((lane, k) => {
+      const gap = L.every * (1 - (1 - ramp) * (k / Math.max(1, n - 1)));  // spacing shrinks across ramp levels
+      if (k) t += gap;
+      G.walls.push(Object.assign(mkWall(t, lane), { gap: k ? gap : L.every }));
+    });
+  }
   ch.s = 4; ch.lastVoice = nowS();
 }
 function mkWall(t, lane){ return { t, lane, s:SCALE[lane], state:'pending', out:0, err:0, n:0, hinted:false, flash:0, tol:G.tol }; }
 function fillEndless(){
-  while (G.nextT < G.t + look + 4){
+  while (G.nextT < G.t + lookNow() + 4){
     let l; do { l = ri(8); } while (l === G.prevLane || Math.abs(l - G.prevLane) > 5);
-    G.walls.push(mkWall(G.nextT, l)); G.prevLane = l;
+    G.walls.push(Object.assign(mkWall(G.nextT, l), { gap:G.every })); G.prevLane = l;
     G.every = Math.max(1.5, G.every - 0.035); G.tol = Math.max(25, G.tol - 0.6); G.nextT += G.every;
   }
   G.walls = G.walls.filter(w => w.t > G.t - 3);
@@ -773,7 +798,8 @@ async function startLevel(i){
   renderLives(); renderScore(); renderProgress();
   const name = i === ENDLESS ? 'Endless' : `Level ${i + 1}`;
   const nm = i === ENDLESS ? 'How far can you sing?' : LEVELS[i].name;
-  showBanner(`${name}<small>${esc(save.name || 'Guest')} · ${nm} · do = ${letterOct(root())}</small>`, true);
+  const sp = i === ENDLESS ? ' · gets faster' : LEVELS[i].ramp ? ` · speed ×${G.speed} and speeding up` : G.speed > 1 ? ` · speed ×${G.speed}` : '';
+  showBanner(`${name}<small>${esc(save.name || 'Guest')} · ${nm}${sp} · do = ${letterOct(root())}</small>`, true);
   countdown = 3; lastCount = -1;
   try { navigator.wakeLock && navigator.wakeLock.request('screen').then(l => { wake = l; }).catch(()=>{}); } catch(e){}
 }
@@ -785,13 +811,13 @@ function updatePlay(dt){
   if (G.level === ENDLESS) fillEndless();
   const next = G.walls.find(w => w.state === 'pending' || w.state === 'crossing');
   updateChar(dt, next ? next.s : ch.s);
-  const hw = (thickPx / pps) / 2, GRACE = 0.085;
+  const hw = (thickPx / vel()) / 2, GRACE = 0.085;
   for (const w of G.walls){
     w.flash = Math.max(0, w.flash - dt * 2.5);
     if (w.state === 'pending'){
       const sample = G.level < 5;
       if (!w.hinted && (sample || save.hints)){
-        const ahead = sample ? Math.min(2.3, G.every - 0.35) : Math.min(1.6, G.every - 0.3);
+        const gap = w.gap || G.every, ahead = sample ? Math.min(2.3, gap - 0.35) : Math.min(1.6, gap - 0.3);
         if (w.t - G.t < ahead){ w.hinted = true; w.listenUntil = G.t + (sample ? 0.9 : 0.4); sample ? sampleTone(w.s) : hintTone(w.s); }
       }
       if (G.t >= w.t - hw) w.state = 'crossing';
@@ -888,7 +914,7 @@ async function startZen(){
   ensureCtx();
   if (!(await startMic())){ pendingStart = () => startZen(); show('micHelp'); return; }
   if (save.root == null && !pointerMode){ startCalib(() => startZen()); return; }
-  show(null); G.mode = 'zen'; G.paused = false; G.t = 0; G.walls = []; G.zenCount = 0; G.zenNext = 1.5; G.zenLane = 0; G.tol = 50;
+  show(null); G.mode = 'zen'; G.paused = false; G.speed = 1; G.t = 0; G.walls = []; G.zenCount = 0; G.zenNext = 1.5; G.zenLane = 0; G.tol = 50;
   fx.trail = [];
   $('#hud').hidden = false; $('#lives').hidden = true; $('#scoreBox').hidden = true; $('#progWrap').style.visibility = 'hidden';
   $('#zenInfo').hidden = false; $('#zenInfo').textContent = 'Zen · just sing';
@@ -900,7 +926,7 @@ function updateZen(dt){
   if (G.t >= G.zenNext){
     G.zenNext = G.t + rand(1.8, 2.8);
     let d = [-2,-1,-1,1,1,2][ri(6)]; let l = G.zenLane + d; if (l < 0 || l > 7) l = G.zenLane - d; G.zenLane = clamp(l, 0, 7);
-    G.walls.push(Object.assign(mkWall(G.t + look, G.zenLane), { zen:true }));
+    G.walls.push(Object.assign(mkWall(G.t + lookNow(), G.zenLane), { zen:true }));
   }
   updateChar(dt, ch.s);
   for (const w of G.walls){
@@ -911,7 +937,7 @@ function updateZen(dt){
     }
     if (w.state === 'pending' && G.t > w.t + 0.2) w.state = 'missed';
   }
-  G.walls = G.walls.filter(w => w.t > G.t - look);
+  G.walls = G.walls.filter(w => w.t > G.t - lookNow());
   fx.trail.push({ t:G.t, s:ch.s, v:ch.raw != null, col:ch.col });
   while (fx.trail.length && fx.trail[0].t < G.t - 6) fx.trail.shift();
 }
@@ -1139,7 +1165,10 @@ function renderLevels(){
     b.innerHTML = `<span class="n">${n}</span><span class="nm">${name}</span><span class="ds">${un ? desc : 'Locked'}</span>${extra}`;
     b.addEventListener('click', () => startLevel(i)); g.appendChild(b);
   };
-  LEVELS.forEach((L, i) => { const s = save.stars[i] || 0; mk(i, i + 1, L.name, L.desc, `<span class="st">${'★'.repeat(s)}<span class="off">${'★'.repeat(3 - s)}</span></span>`); });
+  LEVELS.forEach((L, i) => {
+    const s = save.stars[i] || 0, sp = (L.speed || 1) > 1 ? `<span class="spd">${L.ramp ? '▲ ' : ''}×${L.speed}${L.ramp ? ' speeds up' : ''}</span>` : '';
+    mk(i, i + 1, L.name, L.desc, `<span class="st">${'★'.repeat(s)}<span class="off">${'★'.repeat(3 - s)}</span></span>${sp}`);
+  });
   mk(ENDLESS, '∞', 'Endless', 'Faster and tighter until you run out of lives.', `<span class="small muted">Best ${(save.endlessBest || 0).toLocaleString()}</span>`);
 }
 function renderSettings(){
@@ -1177,7 +1206,14 @@ $('#rNext').addEventListener('click', () => startLevel(G.level + 1 < LEVELS.leng
 $('#rLevels').addEventListener('click', () => { G.mode = 'menu'; show('levels'); });
 function pauseGame(){ if ((G.mode === 'play' || G.mode === 'zen') && !G.paused){ G.paused = true; hideBanner(); show('pause'); $('#restartBtn').textContent = G.mode === 'zen' ? 'Start over' : 'Restart'; } }
 document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
-addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'p'){ if (G.paused) $('#resumeBtn').click(); else pauseGame(); } });
+addEventListener('keydown', e => {
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+  const toggle = e.code === 'Space' || e.key === ' ' || e.key === 'Escape' || e.key === 'p' || e.key === 'P';
+  if (!toggle || e.repeat || !(G.mode === 'play' || G.mode === 'zen')) return;
+  e.preventDefault();                       // stop Space from also "clicking" a focused button
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  if (G.paused) $('#resumeBtn').click(); else pauseGame();
+});
 
 /* ================= tuner ================= */
 let tnLast = '', tnT = 0;
@@ -1216,7 +1252,7 @@ function drawBg(dt, speed){
   }
 }
 function drawLanes(target, labels){
-  ctx.font = `600 ${clamp(pxSemi * 0.7, 11, 15)}px Fredoka, system-ui, sans-serif`; ctx.textBaseline = 'middle';
+  ctx.font = `600 ${clamp(pxUnit * 0.33, 11, 15)}px Fredoka, system-ui, sans-serif`; ctx.textBaseline = 'middle';
   for (let i = 0; i < 8; i++){
     const y = yOf(SCALE[i]), col = LANE[i], on = target === i, near = Math.abs(ch.s - SCALE[i]) < 0.5;
     ctx.fillStyle = rgba(col, on ? 0.22 : near ? 0.16 : 0.07);
@@ -1229,8 +1265,8 @@ function drawLanes(target, labels){
 function roundRect(x, y, w, h, r){ r = Math.min(r, w / 2, h / 2); ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 function drawWalls(){
   for (const w of G.walls){
-    const x = charX + (w.t - G.t) * pps; if (x < -80 || x > W + 80) continue;
-    const cy = yOf(w.s), half = (w.tol / 100) * pxSemi + charR * 0.7, gt = cy - half, gb = cy + half, col = LANE[w.lane], th = thickPx, x0 = x - th / 2;
+    const x = charX + (w.t - G.t) * vel(); if (x < -80 || x > W + 80) continue;
+    const cy = yOf(w.s), gt = yOf(w.s + w.tol / 100) - charR * 0.7, gb = yOf(w.s - w.tol / 100) + charR * 0.7, half = (gb - gt) / 2, col = LANE[w.lane], th = thickPx, x0 = x - th / 2;
     if (w.zen){
       const a = w.state === 'passed' ? 0.2 + w.flash * 0.8 : w.state === 'missed' ? 0.15 : 0.55;
       const r = half * 1.1 + w.flash * 20; const g = ctx.createRadialGradient(x, cy, 0, x, cy, r);
@@ -1256,7 +1292,7 @@ function drawWalls(){
     ctx.strokeStyle = rgba(col, 0.5); ctx.setLineDash([3, 4]); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x0, cy); ctx.lineTo(x0 + th, cy); ctx.stroke(); ctx.setLineDash([]);
     // label
     if (w.state === 'pending' || w.state === 'crossing'){
-      const label = laneLabel(w.lane); ctx.font = `700 ${clamp(pxSemi * 0.85, 13, 19)}px Fredoka, system-ui, sans-serif`;
+      const label = laneLabel(w.lane); ctx.font = `700 ${clamp(pxUnit * 0.4, 13, 19)}px Fredoka, system-ui, sans-serif`;
       const tw = ctx.measureText(label).width + 16, lx = x0 + th + 8;
       ctx.fillStyle = col; roundRect(lx, cy - 12, tw, 24, 12); ctx.fill();
       if (w.listenUntil && G.t < w.listenUntil){
@@ -1264,7 +1300,7 @@ function drawWalls(){
         ctx.strokeStyle = rgba(col, 1 - k); ctx.lineWidth = 3; roundRect(lx - grow, cy - 12 - grow, tw + grow * 2, 24 + grow * 2, 12 + grow); ctx.stroke();
         ctx.font = '700 14px Fredoka, system-ui, sans-serif'; ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle';
         ctx.fillText('♪ listen', lx, cy - 30);
-        ctx.font = `700 ${clamp(pxSemi * 0.85, 13, 19)}px Fredoka, system-ui, sans-serif`;
+        ctx.font = `700 ${clamp(pxUnit * 0.4, 13, 19)}px Fredoka, system-ui, sans-serif`;
       }
       ctx.fillStyle = '#1b0f3d'; ctx.textBaseline = 'middle'; ctx.fillText(label, lx + 8, cy + 1);
     }
@@ -1276,7 +1312,7 @@ function drawTrail(){
   for (let pass = 0; pass < 2; pass++){
     for (let i = 1; i < fx.trail.length; i++){
       const a = fx.trail[i - 1], b = fx.trail[i]; if (!a.v || !b.v) continue;
-      const xa = charX - (G.t - a.t) * pps, xb = charX - (G.t - b.t) * pps, age = (G.t - b.t) / 6;
+      const xa = charX - (G.t - a.t) * vel(), xb = charX - (G.t - b.t) * vel(), age = (G.t - b.t) / 6;
       ctx.strokeStyle = rgba(b.col, (pass ? 0.9 : 0.18) * (1 - age)); ctx.lineWidth = pass ? 3 : 14;
       ctx.beginPath(); ctx.moveTo(xa, yOf(a.s)); ctx.lineTo(xb, yOf(b.s)); ctx.stroke();
     }
@@ -1298,7 +1334,7 @@ function draw(){
   const active = (G.mode === 'play' || G.mode === 'zen') && !G.paused;
   ctx.save();
   if (G.shake > 0) ctx.translate(rand(-G.shake, G.shake), rand(-G.shake, G.shake));
-  drawBg(dt, active ? pps : 40);
+  drawBg(dt, active ? vel() : 40);
   if (G.mode === 'play' || G.mode === 'zen' || G.mode === 'results' || G.paused){
     const next = G.mode === 'play' ? G.walls.find(w => w.state === 'pending' || w.state === 'crossing') : null;
     drawLanes(next ? next.lane : -1);
