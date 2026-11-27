@@ -91,6 +91,7 @@ p{margin:0}
 .lvl .ds{font-size:12.5px;color:var(--muted);flex:1}
 .lvl .st{font-size:18px;letter-spacing:2px;color:var(--accent)}
 .lvl .st .off{color:rgba(255,255,255,.18)}
+.diffrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .lvl .spd{align-self:flex-start;font:700 11px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;color:#ff9f43;background:rgba(255,159,67,.14);padding:5px 8px;border-radius:8px}
 .lvl[disabled]{opacity:.42;cursor:not-allowed;box-shadow:none}
 .lvl.endless{background:linear-gradient(135deg,rgba(255,93,115,.18),rgba(155,123,255,.18))}
@@ -266,7 +267,11 @@ input[type=range]{width:150px;accent-color:var(--accent)}
 <section class="screen" id="levels" hidden>
   <div class="card wide">
     <div class="topbar"><button class="back" data-go="home" aria-label="Back">‹</button><h2>Levels</h2><span class="small muted" id="keyChip"></span></div>
-    <p class="small muted">Earn 2 stars to unlock the next level. Endless opens after level 6.</p>
+    <div class="diffrow">
+      <div class="seg diffseg" role="group" aria-label="Difficulty"><button data-v="easy">Easy</button><button data-v="normal">Normal</button><button data-v="hard">Hard</button></div>
+      <span class="small muted diffinfo"></span>
+    </div>
+    <p class="small muted">Earn 2 stars to unlock the next level. Endless opens after level 6. Each card shows flying speed and the safe zone around the note (±cents).</p>
     <div class="lvgrid" id="lvgrid"></div>
   </div>
 </section>
@@ -310,6 +315,8 @@ input[type=range]{width:150px;accent-color:var(--accent)}
   <div class="card">
     <div class="topbar"><button class="back" data-go="home" aria-label="Back">‹</button><h2>Settings</h2></div>
     <div>
+      <div class="set"><div class="lbl"><b>Difficulty</b><span class="diffinfo"></span></div>
+        <div class="seg diffseg" role="group" aria-label="Difficulty"><button data-v="easy">Easy</button><button data-v="normal">Normal</button><button data-v="hard">Hard</button></div></div>
       <div class="set"><div class="lbl"><b>Note names</b><span>Solfège or letter names</span></div>
         <div class="seg" id="segLabels"><button data-v="solfege">do re mi</button><button data-v="letters">C D E</button></div></div>
       <div class="set"><div class="lbl"><b>Hear each note first</b><span>Levels 6 and up. Levels 1–5 always play it.</span></div><button class="tog" id="togHints" aria-label="Hear each note first"></button></div>
@@ -402,7 +409,7 @@ const rgba = (h, a) => { const [r,g,b] = hexRgb(h); return `rgba(${r},${g},${b},
 const STORE_KEY = 'pitchpilot.v2', OLD_KEY = 'pitchpilot.v1';
 // Every profile carries its own key (root) and sung range (low/high), settings and progress.
 const DEFAULTS = { name:'', color:0, root:null, low:null, high:null, labels:'solfege', hints:true, fold:true, drone:true, sens:0.5,
-  xp:0, stars:{}, best:{}, skin:'bubble', endlessBest:0 };
+  xp:0, stars:{}, best:{}, skin:'bubble', endlessBest:0, difficulty:'normal' };
 const newId = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 function loadStore(){
   let st = null;
@@ -615,6 +622,15 @@ const LEVELS = [
   { name:'Maestro', speed:1.6, ramp:0.8, desc:'Fast leaps, tight gaps.', tol:25, every:1.9, gen:() => pick([0,1,2,3,4,5,6,7], 24) },
 ];
 const ENDLESS = LEVELS.length;
+// Difficulty scales the flying speed and the width of each note's safe zone (in cents).
+const DIFFS = {
+  easy:   { name:'Easy',   speed:0.85, tol:1.3, xp:0.75, info:'Slower flying, wider safe zones. 0.75× XP.' },
+  normal: { name:'Normal', speed:1,    tol:1,   xp:1,    info:'The standard game.' },
+  hard:   { name:'Hard',   speed:1.25, tol:0.7, xp:1.5,  info:'Faster flying, narrower safe zones. 1.5× XP.' },
+};
+const diff = () => DIFFS[save.difficulty] || DIFFS.normal;
+const diffTol = c => clamp(Math.round(c * diff().tol), 15, 90);
+const fmtX = v => '×' + (+v.toFixed(2));
 const RANKS = [ { n:'Hummer', xp:0 }, { n:'Crooner', xp:400 }, { n:'Songbird', xp:1200 }, { n:'Diva', xp:3000 }, { n:'Maestro', xp:6000 } ];
 const SKINS = [ { id:'bubble', name:'Bubble', rank:0 }, { id:'gem', name:'Gem', rank:1 }, { id:'star', name:'Star', rank:2 }, { id:'heart', name:'Heart', rank:3 }, { id:'comet', name:'Comet', rank:4 } ];
 function rankIndex(xp){ let r = 0; RANKS.forEach((k, i) => { if (xp >= k.xp) r = i; }); return r; }
@@ -765,7 +781,8 @@ function updateChar(dt, ref){
 function setupLevel(i){
   const L = LEVELS[i] || { tol:50, every:2.8 };
   Object.assign(G, { level:i, t:0, score:0, combo:0, best:0, lives:3, tally:{ p:0, g:0, o:0, x:0 }, errSum:0, errN:0, shake:0, ended:false, endT:0, paused:false });
-  G.tol = i === ENDLESS ? 55 : L.tol; G.every = i === ENDLESS ? 3.0 : L.every; G.speed = i === ENDLESS ? 1.15 : (L.speed || 1);
+  G.tol = diffTol(i === ENDLESS ? 55 : L.tol); G.every = i === ENDLESS ? 3.0 : L.every; G.speed = (i === ENDLESS ? 1.15 : (L.speed || 1)) * diff().speed;
+  G.diff = save.difficulty || 'normal';
   const start = 3 + lookNow(); // first wall arrives after a 3 s countdown + travel time
   G.walls = [];
   if (i === ENDLESS){ G.nextT = start; G.prevLane = 2; fillEndless(); }
@@ -784,7 +801,7 @@ function fillEndless(){
   while (G.nextT < G.t + lookNow() + 4){
     let l; do { l = ri(8); } while (l === G.prevLane || Math.abs(l - G.prevLane) > 5);
     G.walls.push(Object.assign(mkWall(G.nextT, l), { gap:G.every })); G.prevLane = l;
-    G.every = Math.max(1.5, G.every - 0.035); G.tol = Math.max(25, G.tol - 0.6); G.nextT += G.every;
+    G.every = Math.max(1.5, G.every - 0.035); G.tol = Math.max(diffTol(25), G.tol - 0.6); G.nextT += G.every;
   }
   G.walls = G.walls.filter(w => w.t > G.t - 3);
 }
@@ -798,8 +815,8 @@ async function startLevel(i){
   renderLives(); renderScore(); renderProgress();
   const name = i === ENDLESS ? 'Endless' : `Level ${i + 1}`;
   const nm = i === ENDLESS ? 'How far can you sing?' : LEVELS[i].name;
-  const sp = i === ENDLESS ? ' · gets faster' : LEVELS[i].ramp ? ` · speed ×${G.speed} and speeding up` : G.speed > 1 ? ` · speed ×${G.speed}` : '';
-  showBanner(`${name}<small>${esc(save.name || 'Guest')} · ${nm}${sp} · do = ${letterOct(root())}</small>`, true);
+  const sp = i === ENDLESS ? ' · gets faster' : LEVELS[i].ramp ? ` · speed ${fmtX(G.speed)} and speeding up` : G.speed !== 1 ? ` · speed ${fmtX(G.speed)}` : '';
+  showBanner(`${name}<small>${esc(save.name || 'Guest')} · ${diff().name} · ${nm}${sp} · do = ${letterOct(root())}</small>`, true);
   countdown = 3; lastCount = -1;
   try { navigator.wakeLock && navigator.wakeLock.request('screen').then(l => { wake = l; }).catch(()=>{}); } catch(e){}
 }
@@ -875,7 +892,7 @@ function finish(){
     if (T.x === 0 && great >= 0.9 && perf >= 0.5) stars = 3;
   }
   const prevRank = rankIndex(save.xp);
-  let xp = Math.round(G.score / 10) + stars * 60 + (endless ? Math.round(total * 4) : 0);
+  let xp = Math.round((Math.round(G.score / 10) + stars * 60 + (endless ? Math.round(total * 4) : 0)) * (DIFFS[G.diff] || DIFFS.normal).xp);
   if (pointerMode) xp = 0;
   const firstClear = !endless && stars >= 2 && (save.stars[G.level] || 0) < 2;
   if (!pointerMode){
@@ -884,7 +901,7 @@ function finish(){
     save.xp += xp; persist();
   }
   const newRank = rankIndex(save.xp);
-  $('#resLevel').textContent = endless ? 'Endless' : `Level ${G.level + 1} · ${LEVELS[G.level].name}`;
+  $('#resLevel').textContent = (endless ? 'Endless' : `Level ${G.level + 1} · ${LEVELS[G.level].name}`) + ` · ${(DIFFS[G.diff] || DIFFS.normal).name}`;
   $('#resTitle').textContent = endless ? `${total - T.x} walls cleared` : alive ? (stars === 3 ? 'Flawless!' : 'Level clear!') : 'Out of lives';
   const ss = $('#resStars').children; $('#resStars').style.display = endless ? 'none' : '';
   [...ss].forEach((s, k) => { s.className = ''; setTimeout(() => { if (k < stars) s.className = 'on'; }, 350 + k * 280); });
@@ -1159,6 +1176,7 @@ function renderHome(){
   });
 }
 function renderLevels(){
+  renderDiff();
   $('#keyChip').textContent = save.root != null ? `do = ${letterOct(root())}` : '';
   const g = $('#lvgrid'); g.innerHTML = '';
   const mk = (i, n, name, desc, extra) => {
@@ -1168,12 +1186,21 @@ function renderLevels(){
     b.addEventListener('click', () => startLevel(i)); g.appendChild(b);
   };
   LEVELS.forEach((L, i) => {
-    const s = save.stars[i] || 0, sp = (L.speed || 1) > 1 ? `<span class="spd">${L.ramp ? '▲ ' : ''}×${L.speed}${L.ramp ? ' speeds up' : ''}</span>` : '';
+    const v = (L.speed || 1) * diff().speed, s = save.stars[i] || 0;
+    const sp = `<span class="spd">${L.ramp ? '▲ ' : ''}${fmtX(v)}${L.ramp ? ' speeds up' : ''} · ±${diffTol(L.tol)}¢</span>`;
     mk(i, i + 1, L.name, L.desc, `<span class="st">${'★'.repeat(s)}<span class="off">${'★'.repeat(3 - s)}</span></span>${sp}`);
   });
   mk(ENDLESS, '∞', 'Endless', 'Faster and tighter until you run out of lives.', `<span class="small muted">Best ${(save.endlessBest || 0).toLocaleString()}</span>`);
 }
+function renderDiff(){
+  document.querySelectorAll('.diffseg button').forEach(b => { const on = b.dataset.v === (save.difficulty || 'normal'); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  document.querySelectorAll('.diffinfo').forEach(e => { e.textContent = diff().info; });
+}
+document.querySelectorAll('.diffseg button').forEach(b => b.addEventListener('click', () => {
+  save.difficulty = b.dataset.v; persist(); renderDiff(); if (!$('#levels').hidden) renderLevels();
+}));
 function renderSettings(){
+  renderDiff();
   document.querySelectorAll('#segLabels button').forEach(b => b.classList.toggle('on', b.dataset.v === save.labels));
   $('#togHints').classList.toggle('on', save.hints); $('#togFold').classList.toggle('on', save.fold); $('#togDrone').classList.toggle('on', save.drone);
   $('#sens').value = save.sens; $('#keyOut').textContent = letterOct(root());
@@ -1368,7 +1395,7 @@ function loop(){
 /* ================= test hooks ================= */
 window.PitchPilot = {
   setFakeMidi(m){ fakeMidi = m; },
-  root, state:() => ({ mode:G.mode, t:G.t, lives:G.lives, score:G.score, tally:Object.assign({}, G.tally), walls:G.walls.map(w => ({ s:w.s, t:w.t, state:w.state })) }),
+  root, state:() => ({ mode:G.mode, t:G.t, speed:G.speed, tol:G.tol, lives:G.lives, score:G.score, tally:Object.assign({}, G.tally), walls:G.walls.map(w => ({ s:w.s, t:w.t, state:w.state })) }),
   start:i => startLevel(i), zen:() => startZen(), save:() => save, Yin,
   addProfile:n => { const e = createProfile(n); if (!e) toMenu(); return e; }, calib:() => startCalib(() => toMenu(), true), cal:() => Object.assign({}, CAL, { then:undefined }),
   pitch:() => Object.assign({}, Pitch, { hist:undefined })
