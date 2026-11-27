@@ -74,10 +74,10 @@ p{margin:0}
 .grow{flex:1;min-width:0}
 
 .skins{display:flex;gap:8px;flex-wrap:wrap}
-.skin{width:56px;height:56px;border-radius:16px;background:var(--panel2);border:2px solid var(--line);display:grid;place-items:center;position:relative}
+.skin{width:64px;height:64px;border-radius:16px;background:var(--panel2);border:2px solid var(--line);display:grid;place-items:center;position:relative}
 .skin.on{border-color:var(--accent);background:rgba(255,212,59,.12)}
 .skin[disabled]{opacity:.35;cursor:not-allowed}
-.skin canvas{width:40px;height:40px}
+.skin canvas{width:54px;height:54px}
 .skin .lock{position:absolute;bottom:2px;right:4px;font-size:10px;color:var(--muted)}
 
 /* levels */
@@ -242,7 +242,7 @@ input[type=range]{width:150px;accent-color:var(--accent)}
       <button class="btn ghost" id="setBtn">Settings</button>
     </div>
     <div>
-      <div class="eyebrow" style="margin-bottom:8px">Your flyer</div>
+      <div class="eyebrow" style="margin-bottom:8px">Your flyer · <span id="skinName" style="color:var(--fg)"></span></div>
       <div class="skins" id="skins"></div>
     </div>
     <p class="small muted">Best with headphones in a quiet room. Your voice never leaves this device.</p>
@@ -271,7 +271,7 @@ input[type=range]{width:150px;accent-color:var(--accent)}
       <div class="seg diffseg" role="group" aria-label="Difficulty"><button data-v="easy">Easy</button><button data-v="normal">Normal</button><button data-v="hard">Hard</button></div>
       <span class="small muted diffinfo"></span>
     </div>
-    <p class="small muted">Earn 2 stars to unlock the next level. Endless opens after level 6. Each card shows flying speed and the safe zone around the note (±cents).</p>
+    <p class="small muted">Earn 2 stars to unlock the next level. Endless opens after Triads. Each card shows flying speed and the safe zone around the note (±cents).</p>
     <div class="lvgrid" id="lvgrid"></div>
   </div>
 </section>
@@ -411,6 +411,8 @@ const STORE_KEY = 'pitchpilot.v2', OLD_KEY = 'pitchpilot.v1';
 const DEFAULTS = { name:'', color:0, root:null, low:null, high:null, labels:'solfege', hints:true, fold:true, drone:true, sens:0.5,
   xp:0, stars:{}, best:{}, skin:'bubble', endlessBest:0, difficulty:'normal' };
 const newId = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+// The original 12 levels, in their old order, so saved stars (stored by position before) can be moved to ids.
+const OLD_LEVEL_IDS = ['first-notes','climb','the-scale','wander','twinkle','triads','frere-jacques','skips','ode-to-joy','leaps','quick-scale','maestro'];
 function loadStore(){
   let st = null;
   try { st = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch(e){}
@@ -422,7 +424,13 @@ function loadStore(){
     } catch(e){}
   }
   st.order = st.order.filter(id => st.profiles[id]);
-  st.order.forEach(id => { st.profiles[id] = Object.assign({}, DEFAULTS, st.profiles[id], { id }); });
+  st.order.forEach(id => {
+    const pr = st.profiles[id] = Object.assign({}, DEFAULTS, st.profiles[id], { id });
+    if (!pr.v2){ // stars/best were keyed by level position; move them to level ids
+      ['stars', 'best'].forEach(k => { const o = pr[k] || {}, n = {}; Object.keys(o).forEach(key => { n[/^\d+$/.test(key) ? (OLD_LEVEL_IDS[+key] || key) : key] = o[key]; }); pr[k] = n; });
+      pr.v2 = true;
+    }
+  });
   if (!st.profiles[st.current]) st.current = null;
   return st;
 }
@@ -608,18 +616,28 @@ function skipWalk(n, max){ let l = ri(8), out = []; for (let i = 0; i < n; i++){
 function pick(pool, n){ let out = [], p = -1; for (let i = 0; i < n; i++){ let l; do { l = pool[ri(pool.length)]; } while (l === p && pool.length > 1); out.push(l); p = l; } return out; }
 const UPDOWN = [0,1,2,3,4,5,6,7,6,5,4,3,2,1,0];
 const LEVELS = [
-  { name:'First Notes', speed:1.0, desc:'Only do, mi and sol. Take your time.', tol:60, every:3.4, gen:() => pick([0,2,4], 10) },
-  { name:'Climb', speed:1.0, desc:'Step up from do to sol and back.', tol:55, every:3.1, gen:() => [0,1,2,3,4,3,2,1,0,1,2,3,4] },
-  { name:'The Scale', speed:1.05, desc:'Do re mi fa sol la ti do. All of it.', tol:50, every:2.9, gen:() => UPDOWN.slice() },
-  { name:'Wander', speed:1.1, desc:'Step by step, anywhere in the scale.', tol:50, every:2.8, gen:() => stepWalk(16) },
-  { name:'Twinkle', speed:1.1, desc:'A tune you already know.', tol:45, every:2.6, gen:() => [0,0,4,4,5,5,4,3,3,2,2,1,1,0] },
-  { name:'Triads', speed:1.15, desc:'Hop do, mi, sol, high do.', tol:45, every:2.6, gen:() => [0,2,4,7,4,2,0,2,4,7,7,4,2,0] },
-  { name:'Frère Jacques', speed:1.2, ramp:0.8, desc:'The round, sung solo.', tol:42, every:2.4, gen:() => [0,1,2,0,0,1,2,0,2,3,4,2,3,4] },
-  { name:'Skips', speed:1.25, desc:'Jumps of up to a fourth.', tol:40, every:2.4, gen:() => skipWalk(18, 3) },
-  { name:'Ode to Joy', speed:1.3, ramp:0.8, desc:'Beethoven, one wall at a time.', tol:38, every:2.2, gen:() => [2,2,3,4,4,3,2,1,0,0,1,2,2,1,1] },
-  { name:'Leaps', speed:1.35, desc:'Any note can follow any note.', tol:35, every:2.3, gen:() => pick([0,1,2,3,4,5,6,7], 18) },
-  { name:'Quick Scale', speed:1.5, ramp:0.75, desc:'The full scale, up and down, fast.', tol:30, every:1.7, gen:() => UPDOWN.concat(UPDOWN.slice(1)) },
-  { name:'Maestro', speed:1.6, ramp:0.8, desc:'Fast leaps, tight gaps.', tol:25, every:1.9, gen:() => pick([0,1,2,3,4,5,6,7], 24) },
+  { id:'first-notes', name:'First Notes', speed:1.0, desc:'Only do, mi and sol. Take your time.', tol:60, every:3.4, gen:() => pick([0,2,4], 10) },
+  { id:'hot-cross-buns', name:'Hot Cross Buns', song:true, speed:1.0, desc:'Three notes, one famous bun.', tol:60, every:3.2, gen:() => [2,1,0,2,1,0,0,0,0,0,1,1,1,1,2,1,0] },
+  { id:'climb', name:'Climb', speed:1.0, desc:'Step up from do to sol and back.', tol:55, every:3.1, gen:() => [0,1,2,3,4,3,2,1,0,1,2,3,4] },
+  { id:'au-clair', name:'Au Clair de la Lune', song:true, speed:1.0, desc:'A French moonlight lullaby.', tol:55, every:3.0, gen:() => [0,0,0,1,2,1,0,2,1,1,0] },
+  { id:'mary', name:'Mary Had a Little Lamb', song:true, speed:1.05, desc:'Mi re do re mi mi mi…', tol:52, every:2.8, gen:() => [2,1,0,1,2,2,2,1,1,1,2,4,4,2,1,0,1,2,2,2,2,1,1,2,1,0] },
+  { id:'the-scale', name:'The Scale', speed:1.05, desc:'Do re mi fa sol la ti do. All of it.', tol:50, every:2.9, gen:() => UPDOWN.slice() },
+  { id:'solfege-steps', name:'Do-Re-Mi Steps', speed:1.05, desc:'Do re mi, re mi fa… climb in threes, then slide home.', tol:50, every:2.5, gen:() => [0,1,2,1,2,3,2,3,4,3,4,5,4,5,6,5,6,7,7,6,5,4,3,2,1,0] },
+  { id:'wander', name:'Wander', speed:1.1, desc:'Step by step, anywhere in the scale.', tol:50, every:2.8, gen:() => stepWalk(16) },
+  { id:'twinkle', name:'Twinkle Twinkle', song:true, speed:1.1, desc:'A tune you already know.', tol:45, every:2.6, gen:() => [0,0,4,4,5,5,4,3,3,2,2,1,1,0] },
+  { id:'saints', name:'When the Saints', song:true, speed:1.1, desc:'Oh when the saints go marching in.', tol:45, every:2.5, gen:() => [0,2,3,4,0,2,3,4,0,2,3,4,2,0,2,1] },
+  { id:'triads', name:'Triads', speed:1.15, desc:'Hop do, mi, sol, high do.', tol:45, every:2.6, gen:() => [0,2,4,7,4,2,0,2,4,7,7,4,2,0] },
+  { id:'row-boat', name:'Row Your Boat', song:true, speed:1.15, desc:'Gently down the stream, up to high do.', tol:42, every:2.4, gen:() => [0,0,0,1,2,2,1,2,3,4,7,7,7,4,4,4,2,2,2,0,0,0,4,3,2,1,0] },
+  { id:'frere-jacques', name:'Frère Jacques', song:true, speed:1.2, ramp:0.8, desc:'The round, sung solo.', tol:42, every:2.4, gen:() => [0,1,2,0,0,1,2,0,2,3,4,2,3,4] },
+  { id:'london-bridge', name:'London Bridge', song:true, speed:1.2, desc:'Falling down, my fair lady.', tol:40, every:2.3, gen:() => [4,5,4,3,2,3,4,1,2,3,2,3,4,4,5,4,3,2,3,4,1,4,2,0] },
+  { id:'skips', name:'Skips', speed:1.25, desc:'Jumps of up to a fourth.', tol:40, every:2.4, gen:() => skipWalk(18, 3) },
+  { id:'jingle-bells', name:'Jingle Bells', song:true, speed:1.3, ramp:0.85, desc:'Jingle all the way, getting quicker.', tol:38, every:2.1, gen:() => [2,2,2,2,2,2,2,4,0,1,2,3,3,3,3,3,2,2,2,2,1,1,2,1,4] },
+  { id:'ode-to-joy', name:'Ode to Joy', song:true, speed:1.3, ramp:0.8, desc:'Beethoven, one wall at a time.', tol:38, every:2.2, gen:() => [2,2,3,4,4,3,2,1,0,0,1,2,2,1,1] },
+  { id:'this-old-man', name:'This Old Man', song:true, speed:1.3, desc:'Knick-knack paddywhack.', tol:36, every:2.2, gen:() => [4,2,4,4,2,4,5,4,3,2,1,2,3,2,3,4,0,0,0,0,0,1,2,3,4,4,1,1,3,2,1,0] },
+  { id:'kumbaya', name:'Kumbaya', song:true, speed:1.35, desc:'Slow song, fast flying.', tol:35, every:2.1, gen:() => [0,2,4,4,4,5,5,4,0,2,4,4,4,3,2,1,0,2,4,4,4,5,5,4,3,2,1,1,0] },
+  { id:'leaps', name:'Leaps', speed:1.35, desc:'Any note can follow any note.', tol:35, every:2.3, gen:() => pick([0,1,2,3,4,5,6,7], 18) },
+  { id:'quick-scale', name:'Quick Scale', speed:1.5, ramp:0.75, desc:'The full scale, up and down, fast.', tol:30, every:1.7, gen:() => UPDOWN.concat(UPDOWN.slice(1)) },
+  { id:'maestro', name:'Maestro', speed:1.6, ramp:0.8, desc:'Fast leaps, tight gaps.', tol:25, every:1.9, gen:() => pick([0,1,2,3,4,5,6,7], 24) },
 ];
 const ENDLESS = LEVELS.length;
 // Difficulty scales the flying speed and the width of each note's safe zone (in cents).
@@ -631,10 +649,34 @@ const DIFFS = {
 const diff = () => DIFFS[save.difficulty] || DIFFS.normal;
 const diffTol = c => clamp(Math.round(c * diff().tol), 15, 90);
 const fmtX = v => '×' + (+v.toFixed(2));
-const RANKS = [ { n:'Hummer', xp:0 }, { n:'Crooner', xp:400 }, { n:'Songbird', xp:1200 }, { n:'Diva', xp:3000 }, { n:'Maestro', xp:6000 } ];
-const SKINS = [ { id:'bubble', name:'Bubble', rank:0 }, { id:'gem', name:'Gem', rank:1 }, { id:'star', name:'Star', rank:2 }, { id:'heart', name:'Heart', rank:3 }, { id:'comet', name:'Comet', rank:4 } ];
+const RANKS = [ { n:'Hummer', xp:0 }, { n:'Crooner', xp:400 }, { n:'Songbird', xp:1200 }, { n:'Diva', xp:3000 }, { n:'Maestro', xp:6000 }, { n:'Virtuoso', xp:10000 }, { n:'Legend', xp:16000 } ];
+// ext = how far the drawing reaches (in radii); glow = pulsing light halo; rainbow = body cycles colours; trail = rainbow sparkle trail
+const SKINS = [
+  { id:'bubble',  name:'Bubble',     rank:0 },
+  { id:'bee',     name:'Bee',        rank:0, ext:1.5 },
+  { id:'car',     name:'Car',        rank:1, ext:1.45 },
+  { id:'gem',     name:'Gem',        rank:1, ext:1.2 },
+  { id:'dolphin', name:'Dolphin',    rank:2, ext:1.6 },
+  { id:'star',    name:'Star',       rank:2, ext:1.3 },
+  { id:'plane',   name:'Plane',      rank:3, ext:1.5 },
+  { id:'heart',   name:'Heart',      rank:3, ext:1.15 },
+  { id:'rocket',  name:'Rocket',     rank:4, ext:1.75, glow:true },
+  { id:'comet',   name:'Comet',      rank:4, ext:1.75, trail:'rainbow' },
+  { id:'ufo',     name:'UFO',        rank:5, ext:1.5, glow:true },
+  { id:'unicorn', name:'Unicorn',    rank:5, ext:1.6, glow:true, sz:0.88 },
+  { id:'phoenix', name:'Phoenix',    rank:6, ext:1.65, glow:true, rainbow:true, trail:'rainbow', sz:0.92 },
+  { id:'disco',   name:'Disco Ball', rank:6, ext:1.4, glow:true, rainbow:true, trail:'rainbow' },
+];
+const skinOf = id => SKINS.find(k => k.id === id) || SKINS[0];
 function rankIndex(xp){ let r = 0; RANKS.forEach((k, i) => { if (xp >= k.xp) r = i; }); return r; }
-function isUnlocked(i){ if (i === 0) return true; if (i === ENDLESS) return (save.stars[5] || 0) >= 2; return (save.stars[i - 1] || 0) >= 2; }
+const starsFor = i => (LEVELS[i] && save.stars[LEVELS[i].id]) || 0;
+// A level opens when the one before it has 2 stars, or once it has been played well already.
+function isUnlocked(i){
+  if (i === 0) return true;
+  if (i === ENDLESS) return (save.stars.triads || 0) >= 2;
+  // also open any level that sits before one already played (new songs slotted between cleared levels)
+  return starsFor(i - 1) >= 2 || LEVELS.slice(i).some((L, k) => starsFor(i + k) > 0);
+}
 
 /* ================= game state ================= */
 const G = { mode:'menu', paused:false, speed:1, level:0, walls:[], t:0, tol:50, every:3, score:0, combo:0, best:0, lives:3,
@@ -720,22 +762,181 @@ function shapePath(c, skin, r){
   else if (skin === 'heart'){ c.moveTo(0, r * 1.05); c.bezierCurveTo(-r * 1.6, -r * 0.05, -r * 0.8, -r * 1.35, 0, -r * 0.5); c.bezierCurveTo(r * 0.8, -r * 1.35, r * 1.6, -r * 0.05, 0, r * 1.05); c.closePath(); }
   else c.arc(0, 0, r, 0, Math.PI * 2);
 }
+const INK = '#1b0f3d';
+function mixHex(a, b, t){ const A = hexRgb(a), B = hexRgb(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join(''); }
+function hslHex(h, sat, l){
+  sat /= 100; l /= 100; const k = n => (n + h / 30) % 12, a = sat * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+  return '#' + [f(0), f(8), f(4)].map(v => Math.round(v * 255).toString(16).padStart(2, '0')).join('');
+}
+const rainbowAt = (t, off = 0) => hslHex((((t * 90 + off) % 360) + 360) % 360, 92, 64);
+function bodyFill(c, r, col){
+  const g = c.createRadialGradient(-r * 0.35, -r * 0.45, r * 0.08, 0, 0, r * 1.5);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, col); g.addColorStop(1, mixHex(col, '#000000', 0.22)); return g;
+}
+function rrc(c, x, y, w, h, r){ c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+const FACE = { eyes:[[-0.33, -0.12], [0.33, -0.12]], er:0.2, mouth:[0.05, 0.38] };
+// Each body draws itself facing right around (0,0) at radius r and returns where its face goes (in radii).
+const BODY = {
+  bubble(c, r, col){ c.fillStyle = bodyFill(c, r, col); c.beginPath(); c.arc(0, 0, r, 0, 7); c.fill(); return FACE; },
+  gem(c, r, col){ c.fillStyle = bodyFill(c, r, col); shapePath(c, 'gem', r); c.fill();
+    c.strokeStyle = 'rgba(255,255,255,.45)'; c.lineWidth = r * 0.06; c.beginPath(); c.moveTo(-r * 0.98, -r * 0.1); c.lineTo(r * 0.98, -r * 0.1); c.moveTo(0, -r * 1.18); c.lineTo(-r * 0.4, -r * 0.1); c.lineTo(0, r * 1.18); c.lineTo(r * 0.4, -r * 0.1); c.closePath(); c.stroke(); return { eyes:FACE.eyes, er:0.18, mouth:[0.05, 0.42, 0.8] }; },
+  star(c, r, col){ c.fillStyle = bodyFill(c, r, col); shapePath(c, 'star', r); c.fill(); return FACE; },
+  heart(c, r, col){ c.fillStyle = bodyFill(c, r, col); shapePath(c, 'heart', r); c.fill(); return { eyes:[[-0.33, -0.2], [0.33, -0.2]], er:0.19, mouth:[0, 0.28] }; },
+  comet(c, r, col, t){
+    c.lineCap = 'round';
+    for (let i = 0; i < 3; i++){ c.strokeStyle = rgba(rainbowAt(t * 1.5, i * 70), 0.8); c.lineWidth = r * (0.34 - i * 0.07); c.beginPath(); c.moveTo(-r * 0.6, (i - 1) * r * 0.32); c.quadraticCurveTo(-r * 1.2, (i - 1) * r * 0.4 + Math.sin(t * 9 + i) * r * 0.1, -r * (1.6 + i * 0.1), (i - 1) * r * 0.55); c.stroke(); }
+    c.fillStyle = bodyFill(c, r, col); c.beginPath(); c.arc(0, 0, r, 0, 7); c.fill(); return FACE; },
+  bee(c, r, col, t){
+    const fl = Math.sin(t * 40) * 0.25;
+    c.fillStyle = 'rgba(255,255,255,.6)'; c.strokeStyle = 'rgba(255,255,255,.95)'; c.lineWidth = r * 0.06;
+    c.beginPath(); c.ellipse(-r * 0.2, -r * 0.85, r * 0.45, r * 0.27, -0.6 + fl, 0, 7); c.fill(); c.stroke();
+    c.beginPath(); c.ellipse(r * 0.22, -r * 0.88, r * 0.37, r * 0.23, 0.5 - fl, 0, 7); c.fill(); c.stroke();
+    c.fillStyle = INK; c.beginPath(); c.moveTo(-r * 1.02, -r * 0.13); c.lineTo(-r * 1.45, 0); c.lineTo(-r * 1.02, r * 0.13); c.fill();
+    c.fillStyle = bodyFill(c, r, col); c.beginPath(); c.ellipse(0, 0, r * 1.12, r * 0.85, 0, 0, 7); c.fill();
+    c.save(); c.clip(); c.fillStyle = 'rgba(27,15,61,.82)'; c.fillRect(-r * 0.78, -r, r * 0.26, r * 2); c.fillRect(-r * 0.24, -r, r * 0.26, r * 2); c.restore();
+    c.strokeStyle = INK; c.lineWidth = r * 0.08; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(r * 0.55, -r * 0.62); c.quadraticCurveTo(r * 0.68, -r * 1.1, r * 0.95, -r * 1.08); c.stroke();
+    c.fillStyle = INK; c.beginPath(); c.arc(r * 0.95, -r * 1.08, r * 0.1, 0, 7); c.fill();
+    return { eyes:[[0.38, -0.16], [0.76, -0.16]], er:0.17, mouth:[0.6, 0.32, 0.75] }; },
+  car(c, r, col, t){
+    c.fillStyle = bodyFill(c, r, col);
+    c.beginPath(); c.moveTo(-r * 0.78, -r * 0.15); c.lineTo(-r * 0.45, -r * 0.82); c.lineTo(r * 0.42, -r * 0.82); c.lineTo(r * 0.88, -r * 0.15); c.closePath(); c.fill();
+    c.fillStyle = 'rgba(205,238,255,.92)';
+    c.beginPath(); c.moveTo(-r * 0.62, -r * 0.2); c.lineTo(-r * 0.38, -r * 0.7); c.lineTo(-r * 0.06, -r * 0.7); c.lineTo(-r * 0.06, -r * 0.2); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(r * 0.04, -r * 0.2); c.lineTo(r * 0.04, -r * 0.7); c.lineTo(r * 0.38, -r * 0.7); c.lineTo(r * 0.7, -r * 0.2); c.closePath(); c.fill();
+    c.fillStyle = bodyFill(c, r, col); rrc(c, -r * 1.35, -r * 0.25, r * 2.7, r * 0.75, r * 0.3); c.fill();
+    c.fillStyle = '#fff7b0'; c.beginPath(); c.ellipse(r * 1.24, -r * 0.03, r * 0.12, r * 0.1, 0, 0, 7); c.fill();
+    c.fillStyle = '#ff5d73'; c.fillRect(-r * 1.36, -r * 0.13, r * 0.12, r * 0.17);
+    const sp = t * 14;
+    for (const wx of [-0.75, 0.75]){
+      c.fillStyle = INK; c.beginPath(); c.arc(wx * r, r * 0.5, r * 0.34, 0, 7); c.fill();
+      c.fillStyle = '#d8d0f0'; c.beginPath(); c.arc(wx * r, r * 0.5, r * 0.15, 0, 7); c.fill();
+      c.strokeStyle = INK; c.lineWidth = r * 0.06; c.beginPath(); c.moveTo(wx * r + Math.cos(sp) * r * 0.15, r * 0.5 + Math.sin(sp) * r * 0.15); c.lineTo(wx * r - Math.cos(sp) * r * 0.15, r * 0.5 - Math.sin(sp) * r * 0.15); c.stroke();
+    }
+    return { eyes:[[0.2, -0.45], [0.45, -0.45]], er:0.13, mouth:[1.0, 0.2, 0.55] }; },
+  dolphin(c, r, col, t){
+    const dark = mixHex(col, '#000000', 0.25), sw = Math.sin(t * 6) * 0.08;
+    c.fillStyle = dark; c.beginPath(); c.moveTo(-r * 0.05, -r * 0.6); c.quadraticCurveTo(-r * 0.3, -r * 1.05, -r * 0.6, -r * 1.02); c.lineTo(-r * 0.55, -r * 0.45); c.closePath(); c.fill();
+    c.fillStyle = bodyFill(c, r, col); c.beginPath();
+    c.moveTo(r * 1.5, r * 0.08); c.quadraticCurveTo(r * 1.2, -r * 0.15, r * 0.8, -r * 0.35);
+    c.bezierCurveTo(r * 0.3, -r * 0.75, -r * 0.6, -r * 0.6, -r * 1.1, -r * (0.15 + sw));
+    c.lineTo(-r * 1.5, -r * (0.55 + sw)); c.lineTo(-r * 1.3, -r * sw); c.lineTo(-r * 1.5, r * (0.45 - sw)); c.lineTo(-r * 1.05, r * (0.15 - sw));
+    c.bezierCurveTo(-r * 0.5, r * 0.55, r * 0.5, r * 0.6, r * 1.0, r * 0.25); c.quadraticCurveTo(r * 1.3, r * 0.15, r * 1.5, r * 0.08); c.fill();
+    c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.ellipse(r * 0.25, r * 0.28, r * 0.75, r * 0.18, -0.05, 0, 7); c.fill();
+    c.fillStyle = dark; c.beginPath(); c.moveTo(r * 0.35, r * 0.35); c.lineTo(-r * 0.05, r * 0.8); c.lineTo(r * 0.55, r * 0.42); c.fill();
+    return { eyes:[[0.72, -0.12]], er:0.15, mouth:[1.12, 0.16, 0.55] }; },
+  plane(c, r, col, t){
+    const dark = mixHex(col, '#000000', 0.3);
+    c.fillStyle = dark; c.beginPath(); c.moveTo(-r * 0.95, -r * 0.2); c.lineTo(-r * 1.3, -r * 0.95); c.lineTo(-r * 0.95, -r * 0.95); c.lineTo(-r * 0.55, -r * 0.2); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(-r * 0.1, -r * 0.05); c.lineTo(r * 0.35, -r * 0.05); c.lineTo(-r * 0.05, -r * 0.7); c.lineTo(-r * 0.35, -r * 0.7); c.closePath(); c.fill();
+    c.fillStyle = bodyFill(c, r, col); c.beginPath();
+    c.moveTo(-r * 1.3, -r * 0.15); c.quadraticCurveTo(-r * 1.3, -r * 0.36, -r * 0.9, -r * 0.36); c.lineTo(r * 0.9, -r * 0.36);
+    c.quadraticCurveTo(r * 1.4, -r * 0.32, r * 1.4, 0); c.quadraticCurveTo(r * 1.4, r * 0.32, r * 0.9, r * 0.36); c.lineTo(-r * 0.9, r * 0.3);
+    c.quadraticCurveTo(-r * 1.3, r * 0.25, -r * 1.3, -r * 0.15); c.fill();
+    c.fillStyle = 'rgba(205,238,255,.95)'; for (const wx of [-0.65, -0.35, -0.05]){ c.beginPath(); c.arc(wx * r, -r * 0.08, r * 0.09, 0, 7); c.fill(); }
+    c.fillStyle = dark; c.beginPath(); c.moveTo(-r * 0.25, r * 0.1); c.lineTo(r * 0.3, r * 0.1); c.lineTo(-r * 0.15, r * 0.8); c.lineTo(-r * 0.5, r * 0.8); c.closePath(); c.fill();
+    const ph = Math.abs(Math.sin(t * 30)); c.fillStyle = 'rgba(27,15,61,.7)'; c.beginPath(); c.ellipse(r * 1.45, 0, r * 0.06, r * (0.15 + 0.5 * ph), 0, 0, 7); c.fill();
+    return { eyes:[[0.6, -0.13], [0.9, -0.13]], er:0.12, mouth:[0.95, 0.17, 0.55] }; },
+  rocket(c, r, col, t){
+    const fl = 0.55 + 0.25 * Math.sin(t * 35) + 0.1 * Math.sin(t * 13);
+    const g = c.createLinearGradient(-r * 0.9, 0, -r * (1.3 + fl), 0); g.addColorStop(0, '#fff6a0'); g.addColorStop(0.4, '#ffb43b'); g.addColorStop(1, 'rgba(255,93,115,0)');
+    c.fillStyle = g; c.beginPath(); c.moveTo(-r * 0.85, -r * 0.32); c.quadraticCurveTo(-r * (1 + fl), -r * 0.25, -r * (1.2 + fl), 0); c.quadraticCurveTo(-r * (1 + fl), r * 0.25, -r * 0.85, r * 0.32); c.fill();
+    const dark = mixHex(col, '#000000', 0.3);
+    c.fillStyle = dark;
+    c.beginPath(); c.moveTo(-r * 0.3, -r * 0.45); c.lineTo(-r * 0.95, -r * 1.0); c.lineTo(-r * 0.95, -r * 0.4); c.fill();
+    c.beginPath(); c.moveTo(-r * 0.3, r * 0.45); c.lineTo(-r * 0.95, r * 1.0); c.lineTo(-r * 0.95, r * 0.4); c.fill();
+    c.fillStyle = bodyFill(c, r, col); c.beginPath(); c.moveTo(r * 1.5, 0); c.quadraticCurveTo(r * 1.1, -r * 0.52, r * 0.5, -r * 0.52); c.lineTo(-r * 0.9, -r * 0.45); c.lineTo(-r * 0.9, r * 0.45); c.lineTo(r * 0.5, r * 0.52); c.quadraticCurveTo(r * 1.1, r * 0.52, r * 1.5, 0); c.fill();
+    c.fillStyle = 'rgba(255,255,255,.35)'; c.fillRect(-r * 0.72, -r * 0.47, r * 0.12, r * 0.94);
+    c.fillStyle = '#d8f0ff'; c.strokeStyle = dark; c.lineWidth = r * 0.08; c.beginPath(); c.arc(-r * 0.25, 0, r * 0.22, 0, 7); c.fill(); c.stroke();
+    return { eyes:[[0.52, -0.14], [0.86, -0.14]], er:0.13, mouth:[0.72, 0.22, 0.65] }; },
+  ufo(c, r, col, t){
+    const bg = c.createLinearGradient(0, r * 0.3, 0, r * 1.45); bg.addColorStop(0, rgba(col, 0.4)); bg.addColorStop(1, rgba(col, 0));
+    c.fillStyle = bg; c.beginPath(); c.moveTo(-r * 0.4, r * 0.3); c.lineTo(r * 0.4, r * 0.3); c.lineTo(r * 0.8, r * 1.45); c.lineTo(-r * 0.8, r * 1.45); c.fill();
+    c.fillStyle = 'rgba(205,238,255,.5)'; c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = r * 0.05;
+    c.beginPath(); c.arc(0, -r * 0.15, r * 0.72, Math.PI, 0); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = bodyFill(c, r, col); c.beginPath(); c.ellipse(0, r * 0.12, r * 1.45, r * 0.38, 0, 0, 7); c.fill();
+    c.fillStyle = mixHex(col, '#000000', 0.3); c.beginPath(); c.ellipse(0, r * 0.24, r * 1.0, r * 0.13, 0, 0, 7); c.fill();
+    for (let i = 0; i < 6; i++){ c.fillStyle = rainbowAt(t * 2, i * 60); c.beginPath(); c.arc((-1.1 + i * 0.44) * r, r * 0.12, r * 0.085, 0, 7); c.fill(); }
+    return { eyes:[[-0.22, -0.5], [0.22, -0.5]], er:0.15, mouth:[0, -0.3, 0.5] }; },
+  unicorn(c, r, col, t){
+    c.lineCap = 'round';
+    for (let i = 0; i < 6; i++){ // rainbow mane
+      c.strokeStyle = rainbowAt(t, i * 55); c.lineWidth = r * 0.2; c.beginPath();
+      c.moveTo(-r * (0.05 + i * 0.1), -r * (0.86 - i * 0.04)); c.quadraticCurveTo(-r * (0.95 + i * 0.06), -r * (0.55 - i * 0.12), -r * (0.95 + Math.sin(t * 3 + i) * 0.05), r * (0.55 + i * 0.07)); c.stroke();
+    }
+    const light = mixHex(col, '#ffffff', 0.55);
+    c.fillStyle = light; c.beginPath(); c.moveTo(-r * 0.2, -r * 0.76); c.lineTo(-r * 0.1, -r * 1.18); c.lineTo(r * 0.08, -r * 0.8); c.fill();
+    const hg = c.createLinearGradient(r * 0.3, -r * 0.7, r * 0.75, -r * 1.55); hg.addColorStop(0, '#ffb43b'); hg.addColorStop(1, '#fff3a0');
+    c.fillStyle = hg; c.beginPath(); c.moveTo(r * 0.2, -r * 0.74); c.lineTo(r * 0.74, -r * 1.55); c.lineTo(r * 0.47, -r * 0.66); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(180,110,0,.6)'; c.lineWidth = r * 0.04;
+    for (const k of [0.3, 0.5, 0.7]){ const x1 = r * (0.2 + 0.54 * k), y1 = -r * (0.74 + 0.81 * k); c.beginPath(); c.moveTo(x1 - r * 0.05 * (1 - k), y1 + r * 0.05); c.lineTo(x1 + r * 0.12 * (1 - k), y1 + r * 0.02); c.stroke(); }
+    c.fillStyle = bodyFill(c, r, light); c.beginPath();
+    c.moveTo(-r * 0.7, r * 0.9); c.lineTo(-r * 0.75, -r * 0.2); c.quadraticCurveTo(-r * 0.6, -r * 0.85, r * 0.05, -r * 0.8);
+    c.quadraticCurveTo(r * 0.6, -r * 0.7, r * 1.0, -r * 0.1); c.quadraticCurveTo(r * 1.35, r * 0.3, r * 1.0, r * 0.55);
+    c.quadraticCurveTo(r * 0.6, r * 0.65, r * 0.3, r * 0.4); c.quadraticCurveTo(0, r * 0.6, r * 0.05, r * 0.9); c.closePath(); c.fill();
+    c.fillStyle = rgba(col, 0.55); c.beginPath(); c.arc(r * 0.6, r * 0.12, r * 0.13, 0, 7); c.fill();
+    c.fillStyle = INK; c.beginPath(); c.arc(r * 1.06, r * 0.22, r * 0.05, 0, 7); c.fill();
+    return { eyes:[[0.38, -0.25]], er:0.17, mouth:[0.86, 0.42, 0.55], lashes:true }; },
+  phoenix(c, r, col, t){
+    c.lineCap = 'round';
+    for (let i = 0; i < 3; i++){ const a = (i - 1) * 0.35, len = 0.85 + 0.15 * Math.sin(t * 12 + i); c.strokeStyle = rainbowAt(t, i * 50 + 180); c.lineWidth = r * 0.22; c.beginPath(); c.moveTo(-r * 0.6, 0); c.quadraticCurveTo(-r * 1.0, a * r * 1.2 - r * 0.2, -r * (0.6 + len), a * r * 1.3); c.stroke(); }
+    c.fillStyle = bodyFill(c, r, col); c.beginPath(); c.ellipse(0, r * 0.1, r * 0.85, r * 0.6, 0, 0, 7); c.fill();
+    c.beginPath(); c.arc(r * 0.7, -r * 0.35, r * 0.45, 0, 7); c.fill();
+    for (let i = 0; i < 3; i++){ c.fillStyle = rainbowAt(t, i * 40); c.beginPath(); c.moveTo(r * (0.45 + i * 0.15), -r * 0.7); c.lineTo(r * (0.3 + i * 0.18), -r * (1.2 - i * 0.1)); c.lineTo(r * (0.62 + i * 0.15), -r * 0.74); c.fill(); }
+    c.fillStyle = '#ffd43b'; c.beginPath(); c.moveTo(r * 1.08, -r * 0.46); c.lineTo(r * 1.5, -r * 0.3); c.lineTo(r * 1.08, -r * 0.18); c.fill();
+    const flap = Math.sin(t * 9);
+    c.fillStyle = mixHex(col, '#ffffff', 0.3); c.beginPath(); c.moveTo(r * 0.25, -r * 0.05);
+    c.quadraticCurveTo(-r * 0.15, -r * (0.85 + 0.35 * flap), -r * 0.8, -r * (0.95 + 0.45 * flap)); c.quadraticCurveTo(-r * 0.55, -r * 0.35, -r * 0.45, r * 0.08); c.closePath(); c.fill();
+    return { eyes:[[0.82, -0.44]], er:0.14, mouth:null }; },
+  disco(c, r, col, t){
+    c.save(); c.beginPath(); c.arc(0, 0, r, 0, 7); c.fillStyle = '#2a2150'; c.fill(); c.clip();
+    const n = 6, sz = 2 * r / n, gap = Math.max(0.5, sz * 0.12), rot = (t * 0.6) % 1;
+    for (let i = -1; i <= n; i++) for (let j = 0; j < n; j++){
+      const k = Math.sin(i * 1.7 + j * 2.3 + t * 4);
+      c.fillStyle = k > 0.65 ? '#ffffff' : rgba(rainbowAt(t, i * 30 + j * 45), 0.55 + 0.35 * k);
+      c.fillRect(-r + (i + rot) * sz + gap / 2, -r + j * sz + gap / 2, sz - gap, sz - gap);
+    }
+    const g = c.createRadialGradient(-r * 0.4, -r * 0.45, 0, 0, 0, r); g.addColorStop(0, 'rgba(255,255,255,.5)'); g.addColorStop(1, 'rgba(0,0,0,.3)');
+    c.fillStyle = g; c.fillRect(-r, -r, 2 * r, 2 * r); c.restore();
+    c.strokeStyle = 'rgba(255,255,255,.7)'; c.lineWidth = r * 0.06; c.beginPath(); c.moveTo(0, -r); c.lineTo(0, -r * 1.3); c.stroke();
+    for (let i = 0; i < 3; i++){
+      const a = t * 2 + i * 2.1, sx = Math.cos(a) * r * 1.2, sy = Math.sin(a * 1.3) * r * 1.0, z = r * 0.13 * (0.6 + 0.4 * Math.sin(t * 8 + i));
+      c.fillStyle = '#fff'; c.beginPath(); c.moveTo(sx, sy - z * 2); c.lineTo(sx + z * 0.5, sy); c.lineTo(sx, sy + z * 2); c.lineTo(sx - z * 0.5, sy); c.fill();
+      c.beginPath(); c.moveTo(sx - z * 2, sy); c.lineTo(sx, sy + z * 0.5); c.lineTo(sx + z * 2, sy); c.lineTo(sx, sy - z * 0.5); c.fill();
+    }
+    return FACE; },
+};
 function drawFlyer(c, x, y, r, color, skin, opts = {}){
+  const S = typeof skin === 'string' ? skinOf(skin) : skin, t = opts.t != null ? opts.t : nowS();
+  if (S.rainbow) color = rainbowAt(t);
+  const ext = S.ext || 1.1;
   c.save(); c.translate(x, y);
-  if (opts.sx) c.scale(opts.sx, opts.sy);
-  const g = c.createRadialGradient(-r * 0.35, -r * 0.4, r * 0.1, 0, 0, r * 1.3);
-  g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, color); g.addColorStop(1, rgba(color, 0.85));
-  c.fillStyle = rgba(color, 0.28); shapePath(c, skin, r * 1.55); c.fill();
-  c.fillStyle = g; shapePath(c, skin, r); c.fill();
-  // face
-  const ey = -r * 0.12, ex = r * 0.33, er = r * 0.2, look = opts.look || 0;
-  if (opts.blink){ c.strokeStyle = '#1b0f3d'; c.lineWidth = Math.max(1.5, r * 0.1); c.beginPath(); c.moveTo(-ex - er, ey); c.lineTo(-ex + er, ey); c.moveTo(ex - er, ey); c.lineTo(ex + er, ey); c.stroke(); }
-  else {
-    c.fillStyle = '#fff'; c.beginPath(); c.arc(-ex, ey, er, 0, 7); c.arc(ex, ey, er, 0, 7); c.fill();
-    c.fillStyle = '#1b0f3d'; c.beginPath(); c.arc(-ex + er * 0.3, ey + look * er * 0.45, er * 0.55, 0, 7); c.arc(ex + er * 0.3, ey + look * er * 0.45, er * 0.55, 0, 7); c.fill();
+  const hr = r * ext * 1.45;
+  let g = c.createRadialGradient(0, 0, 0, 0, 0, hr); g.addColorStop(0, rgba(color, S.glow ? 0.5 : 0.3)); g.addColorStop(1, rgba(color, 0));
+  c.fillStyle = g; c.beginPath(); c.arc(0, 0, hr, 0, 7); c.fill();
+  if (S.glow && !opts.preview){
+    const pr = r * ext * 2.4 * (1 + 0.1 * Math.sin(t * 6));
+    c.globalCompositeOperation = 'lighter';
+    g = c.createRadialGradient(0, 0, r * 0.3, 0, 0, pr); g.addColorStop(0, rgba(color, 0.45)); g.addColorStop(0.5, rgba(color, 0.12)); g.addColorStop(1, rgba(color, 0));
+    c.fillStyle = g; c.beginPath(); c.arc(0, 0, pr, 0, 7); c.fill();
+    c.globalCompositeOperation = 'source-over';
   }
-  const open = clamp(opts.mouth || 0, 0, 1);
-  c.fillStyle = '#1b0f3d'; c.beginPath(); c.ellipse(r * 0.05, r * 0.38, r * 0.2, r * (0.05 + open * 0.24), 0, 0, 7); c.fill();
+  if (opts.sx) c.scale(opts.sx, opts.sy);
+  const F = (BODY[S.id] || BODY.bubble)(c, r, color, t) || FACE;
+  const er = F.er * r, look = opts.look || 0;
+  c.lineCap = 'round';
+  for (const [ex, ey] of F.eyes){
+    const X = ex * r, Y = ey * r;
+    if (opts.blink){ c.strokeStyle = INK; c.lineWidth = Math.max(1.5, r * 0.1); c.beginPath(); c.moveTo(X - er, Y); c.lineTo(X + er, Y); c.stroke(); continue; }
+    c.fillStyle = '#fff'; c.beginPath(); c.arc(X, Y, er, 0, 7); c.fill();
+    c.fillStyle = INK; c.beginPath(); c.arc(X + er * 0.3, Y + look * er * 0.45, er * 0.55, 0, 7); c.fill();
+    if (F.lashes){ c.strokeStyle = INK; c.lineWidth = Math.max(1, r * 0.05); for (const a of [-2.4, -1.9, -1.4]){ c.beginPath(); c.moveTo(X + Math.cos(a) * er, Y + Math.sin(a) * er); c.lineTo(X + Math.cos(a) * er * 1.5, Y + Math.sin(a) * er * 1.5); c.stroke(); } }
+  }
+  if (F.mouth){
+    const [mx, my, ms = 1] = F.mouth, open = clamp(opts.mouth || 0, 0, 1);
+    c.fillStyle = INK; c.beginPath(); c.ellipse(mx * r, my * r, r * 0.2 * ms, r * (0.05 + open * 0.24) * ms, 0, 0, 7); c.fill();
+  }
   c.restore();
 }
 
@@ -772,8 +973,8 @@ function updateChar(dt, ref){
   } else ch.vs *= 0.8;
   ch.col = laneColorAt(ch.s);
   // trail
-  const step = SKINS.findIndex(k => k.id === save.skin);
-  const tc = save.skin === 'comet' ? LANE[Math.floor(t * 8) % 8] : ch.col;
+  const SK = skinOf(save.skin), step = SK.rank * 1.6;
+  const tc = SK.trail === 'rainbow' ? rainbowAt(t * 2, rand(0, 120)) : ch.col;
   if (Pitch.voiced || pointerMode){ fx.parts.push({ x:charX - charR * 0.6, y:yOf(ch.s) + rand(-3, 3), vx:-vel() * 0.9, vy:rand(-12, 12), life:0.55, max:0.55, col:tc, size:rand(2.5, 5) + step * 0.3 }); }
 }
 
@@ -894,9 +1095,10 @@ function finish(){
   const prevRank = rankIndex(save.xp);
   let xp = Math.round((Math.round(G.score / 10) + stars * 60 + (endless ? Math.round(total * 4) : 0)) * (DIFFS[G.diff] || DIFFS.normal).xp);
   if (pointerMode) xp = 0;
-  const firstClear = !endless && stars >= 2 && (save.stars[G.level] || 0) < 2;
+  const lid = endless ? null : LEVELS[G.level].id;
+  const firstClear = !endless && stars >= 2 && (save.stars[lid] || 0) < 2;
   if (!pointerMode){
-    if (!endless){ save.stars[G.level] = Math.max(save.stars[G.level] || 0, stars); save.best[G.level] = Math.max(save.best[G.level] || 0, G.score); }
+    if (!endless){ save.stars[lid] = Math.max(save.stars[lid] || 0, stars); save.best[lid] = Math.max(save.best[lid] || 0, G.score); }
     else save.endlessBest = Math.max(save.endlessBest || 0, G.score);
     save.xp += xp; persist();
   }
@@ -911,7 +1113,7 @@ function finish(){
   const R = RANKS[newRank], N = RANKS[newRank + 1];
   setTimeout(() => { $('#rXpFill').style.width = N ? (100 * (save.xp - R.xp) / (N.xp - R.xp)) + '%' : '100%'; }, 50);
   $('#rXpFill').style.width = '0';
-  $('#rXp').textContent = pointerMode ? 'Touch mode: no XP. Sing to earn XP and stars.' : `+${xp} XP` + (newRank > prevRank ? ` · Rank up: ${R.n}! New flyer unlocked.` : N ? ` · ${N.xp - save.xp} XP to ${N.n}` : '');
+  $('#rXp').textContent = pointerMode ? 'Touch mode: no XP. Sing to earn XP and stars.' : `+${xp} XP` + (newRank > prevRank ? ` · Rank up: ${R.n}! New flyers unlocked.` : N ? ` · ${N.xp - save.xp} XP to ${N.n}` : '');
   let tip = '';
   if (endless) tip = `Best: ${(save.endlessBest || 0).toLocaleString()} pts`;
   else if (!alive) tip = 'Tip: hum the hint tone quietly before the wall arrives, then glide to it.';
@@ -1157,19 +1359,26 @@ $('#newProf').addEventListener('submit', e => {
 $('#profBack').addEventListener('click', () => { delArmed = null; toMenu(); });
 $('#whoSwitch').addEventListener('click', () => { delArmed = null; show('profiles'); });
 $('#rPass').addEventListener('click', () => { G.mode = 'menu'; show('profiles'); });
+const previews = [];
+function drawPreview(pv, t){
+  pv.x.clearRect(0, 0, 54, 54);
+  drawFlyer(pv.x, 27, 27, 25 / ((pv.s.ext || 1.1) * 1.45), pv.col, pv.s, { mouth:0.3, preview:true, t });
+}
 function renderHome(){
   $('#whoAva').innerHTML = avatarHTML(save, 46); $('#whoName').textContent = save.name || 'Guest';
   const r = rankIndex(save.xp), R = RANKS[r], N = RANKS[r + 1];
   $('#rankBadge').textContent = r + 1; $('#rankName').textContent = R.n;
   $('#xpFill').style.width = N ? (100 * (save.xp - R.xp) / (N.xp - R.xp)) + '%' : '100%';
   $('#xpText').textContent = N ? `${save.xp} XP · ${N.xp - save.xp} to ${N.n}` : `${save.xp} XP · top rank`;
-  const box = $('#skins'); box.innerHTML = '';
-  SKINS.forEach(s => {
+  const box = $('#skins'); box.innerHTML = ''; previews.length = 0;
+  $('#skinName').textContent = skinOf(save.skin).name + (skinOf(save.skin).glow ? ' ✦' : '');
+  SKINS.forEach((s, si) => {
     const b = document.createElement('button'); b.className = 'skin' + (save.skin === s.id ? ' on' : '');
     const locked = r < s.rank; b.disabled = locked; b.setAttribute('aria-label', s.name + (locked ? `, unlocks at ${RANKS[s.rank].n}` : ''));
     b.title = locked ? `Reach ${RANKS[s.rank].n}` : s.name;
-    const c = document.createElement('canvas'); c.width = 80; c.height = 80; const x = c.getContext('2d'); x.scale(2, 2);
-    drawFlyer(x, 20, 20, 8.5, LANE[(s.rank * 2 + 1) % 8], s.id, { mouth:0.3 });
+    const c = document.createElement('canvas'); c.width = 108; c.height = 108; const x = c.getContext('2d'); x.scale(2, 2);
+    const pv = { x, s, col:LANE[(si * 3 + 1) % 8], locked };
+    previews.push(pv); drawPreview(pv, 1.3);
     b.appendChild(c); if (locked){ const l = document.createElement('span'); l.className = 'lock'; l.textContent = RANKS[s.rank].n; b.appendChild(l); }
     b.addEventListener('click', () => { save.skin = s.id; persist(); renderHome(); });
     box.appendChild(b);
@@ -1186,9 +1395,9 @@ function renderLevels(){
     b.addEventListener('click', () => startLevel(i)); g.appendChild(b);
   };
   LEVELS.forEach((L, i) => {
-    const v = (L.speed || 1) * diff().speed, s = save.stars[i] || 0;
+    const v = (L.speed || 1) * diff().speed, s = starsFor(i);
     const sp = `<span class="spd">${L.ramp ? '▲ ' : ''}${fmtX(v)}${L.ramp ? ' speeds up' : ''} · ±${diffTol(L.tol)}¢</span>`;
-    mk(i, i + 1, L.name, L.desc, `<span class="st">${'★'.repeat(s)}<span class="off">${'★'.repeat(3 - s)}</span></span>${sp}`);
+    mk(i, i + 1, L.name, (L.song ? '♪ Song · ' : '') + L.desc, `<span class="st">${'★'.repeat(s)}<span class="off">${'★'.repeat(3 - s)}</span></span>${sp}`);
   });
   mk(ENDLESS, '∞', 'Endless', 'Faster and tighter until you run out of lives.', `<span class="small muted">Best ${(save.endlessBest || 0).toLocaleString()}</span>`);
 }
@@ -1374,7 +1583,7 @@ function draw(){
     const mouth = pointerMode ? 0.4 : clamp(Pitch.rms * 25, 0, 1);
     const st = clamp(Math.abs(ch.vs) * 0.012, 0, 0.22);
     ch.blink = (t % 4) < 0.12;
-    drawFlyer(ctx, charX, yOf(ch.s), charR, ch.col, save.skin, { sx:1 - st * 0.5, sy:1 + st, mouth: Pitch.voiced || pointerMode ? mouth : 0.05, blink:ch.blink, look: next ? -clamp((next.s - ch.s) / 3, -1, 1) : 0 });
+    drawFlyer(ctx, charX, yOf(ch.s), charR * (skinOf(save.skin).sz || 1), ch.col, save.skin, { sx:1 - st * 0.5, sy:1 + st, mouth: Pitch.voiced || pointerMode ? mouth : 0.05, blink:ch.blink, look: next ? -clamp((next.s - ch.s) / 3, -1, 1) : 0 });
   } else drawFx();
   ctx.restore();
 }
@@ -1389,6 +1598,7 @@ function loop(){
   updateFx(dt);
   draw();
   if ((G.mode === 'play' || G.mode === 'zen') && !G.paused) updateTuner();
+  if (previews.length && !$('#home').hidden){ const tt = nowS(); previews.forEach(pv => { if (!pv.locked) drawPreview(pv, tt); }); }
   requestAnimationFrame(loop);
 }
 
@@ -1396,7 +1606,7 @@ function loop(){
 window.PitchPilot = {
   setFakeMidi(m){ fakeMidi = m; },
   root, state:() => ({ mode:G.mode, t:G.t, speed:G.speed, tol:G.tol, lives:G.lives, score:G.score, tally:Object.assign({}, G.tally), walls:G.walls.map(w => ({ s:w.s, t:w.t, state:w.state })) }),
-  start:i => startLevel(i), zen:() => startZen(), save:() => save, Yin,
+  start:i => startLevel(i), levels:() => LEVELS, drawFlyer, zen:() => startZen(), save:() => save, Yin,
   addProfile:n => { const e = createProfile(n); if (!e) toMenu(); return e; }, calib:() => startCalib(() => toMenu(), true), cal:() => Object.assign({}, CAL, { then:undefined }),
   pitch:() => Object.assign({}, Pitch, { hist:undefined })
 };
